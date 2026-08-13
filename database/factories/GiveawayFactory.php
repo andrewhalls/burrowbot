@@ -8,6 +8,7 @@ use App\Models\CollectionTheme;
 use App\Models\Giveaway;
 use App\Models\Guild;
 use Illuminate\Database\Eloquent\Factories\Factory;
+use Illuminate\Support\Carbon;
 
 /**
  * @extends Factory<Giveaway>
@@ -42,6 +43,11 @@ class GiveawayFactory extends Factory
                 'ends_at' => $startedAt->clone()->addMinutes($attributes['duration_minutes'] ?? 30),
             ];
         });
+    }
+
+    public function scheduledFor(Carbon $when): static
+    {
+        return $this->state(['scheduled_start_at' => $when]);
     }
 
     public function closed(): static

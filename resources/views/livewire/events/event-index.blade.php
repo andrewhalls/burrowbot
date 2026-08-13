@@ -1,7 +1,7 @@
 <div class="space-y-6">
     <div class="flex items-center justify-between">
         <h2 class="text-lg font-semibold">Events</h2>
-        <button type="button" wire:click="$toggle('showCreateForm')" class="text-sm text-accent hover:text-accent">
+        <button type="button" wire:click="$toggle('showCreateForm')" class="rounded-pill bg-accent hover:bg-accent-hover px-4 py-2 text-sm font-medium text-accent-ink">
             {{ $showCreateForm ? 'Cancel' : '+ New event' }}
         </button>
     </div>
@@ -13,13 +13,20 @@
     <ul class="divide-y divide-line rounded-card border border-line">
         @forelse ($events as $event)
             <li class="p-4 flex items-center justify-between">
-                <div>
-                    <p class="font-medium">{{ $event->title }}</p>
-                    <p class="text-xs text-muted">
-                        {{ $event->eventRoleSet->name }} &middot;
-                        {{ $event->isRecurring() ? 'Recurring' : 'One-off' }} &middot;
-                        {{ ucfirst($event->status) }}
-                    </p>
+                <div class="flex items-center gap-3">
+                    <div>
+                        <p class="font-medium text-ink">{{ $event->title }}</p>
+                        <p class="text-xs text-muted">
+                            {{ $event->eventRoleSet->name }} &middot;
+                            {{ $event->isRecurring() ? 'Recurring' : 'One-off' }}
+                        </p>
+                    </div>
+                    <span @class([
+                        'rounded-pill px-2.5 py-1 text-xs font-medium',
+                        'bg-success/15 text-success' => $event->status === 'active',
+                        'bg-warning/15 text-warning' => $event->status === 'paused',
+                        'bg-danger/15 text-danger' => $event->status === 'cancelled',
+                    ])>{{ ucfirst($event->status) }}</span>
                 </div>
                 <div class="flex gap-2 text-xs">
                     @if ($event->status !== 'active')

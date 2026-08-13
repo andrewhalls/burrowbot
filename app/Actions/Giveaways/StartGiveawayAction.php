@@ -7,32 +7,48 @@ namespace App\Actions\Giveaways;
 use App\Jobs\PostGiveawayMessage;
 use App\Models\Giveaway;
 use Illuminate\Support\Facades\Config;
+use Illuminate\Support\Facades\DB;
 use InvalidArgumentException;
 
 /**
- * Transitions a draft giveaway to active: fixes its close time and
- * requests the bot post it to Discord.
+ * Starts a draft giveaway: posts it to Discord and transitions it to
+ * `active`. Called by both a manual "Start" click and the
+ * `giveaways:post-due` scheduled command. Follows the same
+ * dispatch-a-queued-job-onto-the-outbound-queue pattern as
+ * `CloseExpiredGiveaways`/`CloseGiveawayMessage` - the job itself creates
+ * the `DiscordOutboundAction` row when it runs, rather than this action
+ * creating it inline.
  *
- * See openspec specs/giveaway-lifecycle - "Starting a giveaway".
+ * The row lock guards against a manual click and the scheduled command
+ * racing on the same giveaway; whichever transaction wins the lock starts
+ * it, the other finds it already non-draft and throws - callers that can
+ * legitimately race (the scheduled command) must catch this.
+ *
+ * See openspec specs/giveaway-lifecycle - "Starting a giveaway",
+ * "Scheduled start".
  */
 class StartGiveawayAction
 {
     public function execute(Giveaway $giveaway): Giveaway
     {
-        if (! $giveaway->isDraft()) {
-            throw new InvalidArgumentException('Only a draft giveaway can be started.');
-        }
+        return DB::transaction(function () use ($giveaway) {
+            $locked = Giveaway::query()->lockForUpdate()->findOrFail($giveaway->id);
 
-        $startedAt = now();
+            if (! $locked->isDraft()) {
+                throw new InvalidArgumentException('Only a draft giveaway can be started.');
+            }
 
-        $giveaway->fill([
-            'status' => Giveaway::STATUS_ACTIVE,
-            'starts_at' => $startedAt,
-            'ends_at' => $startedAt->clone()->addMinutes($giveaway->duration_minutes),
-        ])->save();
+            $startedAt = now();
 
-        PostGiveawayMessage::dispatch($giveaway)->onQueue(Config::string('discord.outbound_queue'));
+            $locked->update([
+                'status' => Giveaway::STATUS_ACTIVE,
+                'starts_at' => $startedAt,
+                'ends_at' => $startedAt->clone()->addMinutes($locked->duration_minutes),
+            ]);
 
-        return $giveaway;
+            PostGiveawayMessage::dispatch($locked)->onQueue(Config::string('discord.outbound_queue'));
+
+            return $locked;
+        });
     }
 }

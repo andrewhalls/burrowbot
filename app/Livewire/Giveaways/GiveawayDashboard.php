@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Livewire\Giveaways;
 
 use App\Actions\Giveaways\FulfillGiveawayEntryAction;
+use App\Actions\Giveaways\StartGiveawayAction;
 use App\Models\Giveaway;
 use App\Models\GiveawayEntry;
 use Illuminate\Contracts\View\View;
@@ -54,6 +55,13 @@ class GiveawayDashboard extends Component
             ->findOrFail($entryId);
 
         $fulfillEntry->execute($entry, Auth::user());
+    }
+
+    public function start(StartGiveawayAction $startGiveaway): void
+    {
+        $this->authorize('manage', $this->giveaway);
+
+        $this->giveaway = $startGiveaway->execute($this->giveaway);
     }
 
     public function render(): View

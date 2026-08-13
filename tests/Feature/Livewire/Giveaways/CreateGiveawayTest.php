@@ -68,3 +68,45 @@ it('denies mounting for a guild the user does not admin', function () {
         ->test(CreateGiveaway::class, ['guild' => $guild])
         ->assertForbidden();
 });
+
+it('creates a giveaway with a future scheduled start', function () {
+    $user = User::factory()->create();
+    $guild = Guild::factory()->create();
+    GuildAdmin::factory()->for($guild)->for($user)->create();
+    $theme = CollectionTheme::factory()->for($guild)->create();
+    $future = now()->addDay();
+
+    Livewire::actingAs($user)
+        ->test(CreateGiveaway::class, ['guild' => $guild])
+        ->set('channelId', '123456')
+        ->set('collectionThemeId', $theme->id)
+        ->set('durationMinutes', 15)
+        ->set('scheduledStartDate', $future->toDateString())
+        ->set('scheduledStartTime', $future->format('H:i'))
+        ->call('save')
+        ->assertHasNoErrors();
+
+    $giveaway = Giveaway::query()->where('guild_id', $guild->id)->sole();
+    expect($giveaway->scheduled_start_at)->not->toBeNull()
+        ->and($giveaway->isDraft())->toBeTrue();
+});
+
+it('rejects a scheduled start in the past', function () {
+    $user = User::factory()->create();
+    $guild = Guild::factory()->create();
+    GuildAdmin::factory()->for($guild)->for($user)->create();
+    $theme = CollectionTheme::factory()->for($guild)->create();
+    $past = now()->subDay();
+
+    Livewire::actingAs($user)
+        ->test(CreateGiveaway::class, ['guild' => $guild])
+        ->set('channelId', '123456')
+        ->set('collectionThemeId', $theme->id)
+        ->set('durationMinutes', 15)
+        ->set('scheduledStartDate', $past->toDateString())
+        ->set('scheduledStartTime', $past->format('H:i'))
+        ->call('save')
+        ->assertHasErrors('scheduledStartDate');
+
+    expect(Giveaway::query()->count())->toBe(0);
+});

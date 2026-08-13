@@ -14,12 +14,18 @@ use App\Models\Guild;
  */
 class CreateGiveawayAction
 {
-    public function execute(Guild $guild, CollectionTheme $theme, string $channelId, int $durationMinutes): Giveaway
-    {
+    public function execute(
+        Guild $guild,
+        CollectionTheme $theme,
+        string $channelId,
+        int $durationMinutes,
+        ?\DateTimeInterface $scheduledStartAt = null,
+    ): Giveaway {
         return $guild->giveaways()->create([
             'collection_theme_id' => $theme->id,
             'channel_id' => $channelId,
             'duration_minutes' => $durationMinutes,
+            'scheduled_start_at' => $scheduledStartAt,
             'status' => Giveaway::STATUS_DRAFT,
         ]);
     }

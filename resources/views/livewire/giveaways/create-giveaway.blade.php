@@ -23,8 +23,25 @@
             @error('durationMinutes') <p class="text-danger text-xs mt-1">{{ $message }}</p> @enderror
         </div>
 
-        <button type="button" wire:click="save" class="rounded-control bg-accent hover:bg-accent-hover px-4 py-2 text-sm font-medium">
-            Create giveaway
+        <div class="pt-2 border-t border-line">
+            <p class="text-sm font-medium text-ink mb-1">Scheduled start (optional)</p>
+            <p class="text-xs text-muted mb-3">Leave blank to start it manually later. Set a future date/time to have it post automatically.</p>
+            <div class="flex gap-3">
+                <div class="flex-1">
+                    <label class="block text-sm text-muted mb-1">Date</label>
+                    <input type="date" wire:model="scheduledStartDate" class="w-full rounded-control bg-surface border border-line px-3 py-2 text-sm">
+                    @error('scheduledStartDate') <p class="text-danger text-xs mt-1">{{ $message }}</p> @enderror
+                </div>
+                <div class="flex-1">
+                    <label class="block text-sm text-muted mb-1">Time</label>
+                    <input type="time" wire:model="scheduledStartTime" class="w-full rounded-control bg-surface border border-line px-3 py-2 text-sm">
+                    @error('scheduledStartTime') <p class="text-danger text-xs mt-1">{{ $message }}</p> @enderror
+                </div>
+            </div>
+        </div>
+
+        <button type="button" wire:click="save" class="rounded-pill bg-accent hover:bg-accent-hover px-4 py-2 text-sm font-medium text-accent-ink">
+            Create popup giveaway
         </button>
     </div>
 </div>

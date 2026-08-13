@@ -1,6 +1,6 @@
 <div class="max-w-5xl mx-auto w-full px-6 py-10">
     <div class="flex items-center justify-between mb-8">
-        <h1 class="text-xl font-semibold">Burrow</h1>
+        <h1 class="text-xl font-semibold text-ink">Burrow</h1>
         <form method="POST" action="{{ route('logout') }}">
             @csrf
             <button type="submit" class="text-sm text-muted hover:text-ink">Sign out</button>
@@ -11,7 +11,7 @@
 
     @if ($guilds->isEmpty())
         <div class="rounded-card border border-line p-6 space-y-4">
-            <h2 class="font-medium">Get started</h2>
+            <h2 class="font-semibold text-ink">Get started</h2>
             <p class="text-sm text-muted">
                 You're signed in, but Burrow doesn't see any Discord servers you administer yet.
                 To fix that:
@@ -24,7 +24,7 @@
             <div class="flex items-center gap-4 pt-2">
                 <a href="{{ \App\Support\Discord\BotInviteUrl::build() }}"
                    target="_blank" rel="noopener"
-                   class="inline-flex items-center rounded-control bg-accent hover:bg-accent-hover px-4 py-2 text-sm font-medium text-white">
+                   class="inline-flex items-center rounded-pill bg-accent hover:bg-accent-hover px-5 py-2.5 text-sm font-medium text-accent-ink">
                     Invite bot to your server
                 </a>
                 <a href="{{ route('auth.discord.redirect') }}" class="text-sm text-muted hover:text-ink">
@@ -35,15 +35,20 @@
     @else
         <div class="space-y-4">
             @foreach ($guilds as $guild)
-                <div class="rounded-card border border-line p-4">
-                    <h2 class="font-medium mb-3">{{ $guild->name }}</h2>
-                    <div class="flex flex-wrap gap-x-4 gap-y-1 text-sm">
-                        <a href="{{ route('guilds.settings', $guild) }}" class="text-muted hover:text-ink">Settings</a>
-                        <a href="{{ route('guilds.themes.index', $guild) }}" class="text-muted hover:text-ink">Collection themes</a>
-                        <a href="{{ route('guilds.event-role-sets.index', $guild) }}" class="text-muted hover:text-ink">Event role sets</a>
-                        <a href="{{ route('guilds.events.index', $guild) }}" class="text-muted hover:text-ink">Events</a>
-                        <a href="{{ route('guilds.giveaways.create', $guild) }}" class="text-muted hover:text-ink">Giveaways</a>
-                        <a href="{{ route('guilds.standard-giveaways.index', $guild) }}" class="text-muted hover:text-ink">Standard giveaways</a>
+                <div class="rounded-card border border-line p-5">
+                    <div class="flex items-center gap-3 mb-4">
+                        <span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-control bg-accent text-accent-ink font-semibold">
+                            {{ Str::upper(Str::substr($guild->name, 0, 1)) }}
+                        </span>
+                        <h2 class="font-semibold text-ink">{{ $guild->name }}</h2>
+                    </div>
+                    <div class="flex flex-wrap gap-2 text-sm">
+                        <a href="{{ route('guilds.settings', $guild) }}" class="rounded-pill border border-line px-3 py-1.5 text-muted hover:bg-surface-hover hover:text-ink">Settings</a>
+                        <a href="{{ route('guilds.themes.index', $guild) }}" class="rounded-pill border border-line px-3 py-1.5 text-muted hover:bg-surface-hover hover:text-ink">Collection themes</a>
+                        <a href="{{ route('guilds.event-role-sets.index', $guild) }}" class="rounded-pill border border-line px-3 py-1.5 text-muted hover:bg-surface-hover hover:text-ink">Event role sets</a>
+                        <a href="{{ route('guilds.events.index', $guild) }}" class="rounded-pill border border-line px-3 py-1.5 text-muted hover:bg-surface-hover hover:text-ink">Events</a>
+                        <a href="{{ route('guilds.giveaways.create', $guild) }}" class="rounded-pill border border-line px-3 py-1.5 text-muted hover:bg-surface-hover hover:text-ink">Giveaways</a>
+                        <a href="{{ route('guilds.standard-giveaways.index', $guild) }}" class="rounded-pill border border-line px-3 py-1.5 text-muted hover:bg-surface-hover hover:text-ink">Standard giveaways</a>
                     </div>
                 </div>
             @endforeach

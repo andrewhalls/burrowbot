@@ -6,6 +6,7 @@
         'guilds.themes.index' => 'themes',
         'guilds.event-role-sets.index' => 'event-role-sets',
         'guilds.events.index' => 'events',
+        'guilds.giveaways.index' => 'giveaways',
         'guilds.giveaways.create' => 'giveaways',
         'guilds.giveaways.show' => 'giveaways',
         'guilds.standard-giveaways.index' => 'standard-giveaways',
@@ -17,7 +18,7 @@
         'themes' => ['label' => 'Collection themes', 'route' => 'guilds.themes.index'],
         'event-role-sets' => ['label' => 'Event role sets', 'route' => 'guilds.event-role-sets.index'],
         'events' => ['label' => 'Events', 'route' => 'guilds.events.index'],
-        'giveaways' => ['label' => 'Giveaways', 'route' => 'guilds.giveaways.create'],
+        'giveaways' => ['label' => 'Popup giveaways', 'route' => 'guilds.giveaways.index'],
         'standard-giveaways' => ['label' => 'Standard giveaways', 'route' => 'guilds.standard-giveaways.index'],
     ];
 
@@ -31,31 +32,28 @@
     ];
 @endphp
 
-<aside class="w-64 shrink-0 border-r border-line bg-surface flex flex-col">
-    <a href="{{ route('dashboard') }}" class="flex items-center gap-2 px-6 py-5 text-lg font-semibold text-ink">
-        <span class="inline-flex h-8 w-8 items-center justify-center rounded-control bg-accent text-accent-ink text-sm">B</span>
-        Burrow
+<aside class="w-20 shrink-0 border-r border-line bg-surface flex flex-col items-center gap-6 py-5">
+    <a href="{{ route('dashboard') }}" title="Dashboard"
+       class="flex h-10 w-10 items-center justify-center rounded-control bg-accent text-accent-ink text-sm font-semibold">
+        B
+        <span class="sr-only">Dashboard</span>
     </a>
 
     @if ($guild)
-        <p class="px-6 pb-2 text-xs font-medium uppercase tracking-wide text-muted">{{ $guild->name }}</p>
-
-        <nav class="flex-1 space-y-1 px-3">
+        <nav class="flex flex-1 flex-col items-center gap-2">
             @foreach ($links as $key => $link)
-                <a href="{{ route($link['route'], $guild) }}"
-                   class="flex items-center gap-3 rounded-control px-3 py-2 text-sm transition-colors {{ $key === $active ? 'bg-accent text-accent-ink font-medium' : 'text-muted hover:bg-surface-hover hover:text-ink' }}">
+                <a href="{{ route($link['route'], $guild) }}" title="{{ $link['label'] }}"
+                   class="flex h-11 w-11 items-center justify-center rounded-control transition-colors {{ $key === $active ? 'bg-accent text-accent-ink' : 'text-muted hover:bg-surface-hover hover:text-ink' }}">
                     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="h-5 w-5 shrink-0">
                         @foreach (explode('|', $icons[$key]) as $path)
                             <path stroke-linecap="round" stroke-linejoin="round" d="{{ $path }}" />
                         @endforeach
                     </svg>
-                    {{ $link['label'] }}
+                    <span class="sr-only">{{ $link['label'] }}</span>
                 </a>
             @endforeach
         </nav>
     @else
-        <nav class="flex-1 px-3">
-            <p class="px-3 py-2 text-sm text-muted">Select a guild to get started.</p>
-        </nav>
+        <div class="flex-1"></div>
     @endif
 </aside>

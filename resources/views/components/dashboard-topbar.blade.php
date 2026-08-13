@@ -5,33 +5,58 @@
 
     $administeredGuilds ??= collect();
     $currentRoute = request()->route();
+
+    $routeNameToPageLabel = [
+        'guilds.settings' => 'Settings',
+        'guilds.themes.index' => 'Collection themes',
+        'guilds.event-role-sets.index' => 'Event role sets',
+        'guilds.events.index' => 'Events',
+        'guilds.event-occurrences.show' => 'Occurrence',
+        'guilds.giveaways.index' => 'Popup giveaways',
+        'guilds.giveaways.create' => 'Popup giveaways',
+        'guilds.giveaways.show' => 'Popup giveaway',
+        'guilds.standard-giveaways.index' => 'Standard giveaways',
+        'guilds.standard-giveaway-occurrences.show' => 'Occurrence',
+        'dashboard' => 'Overview',
+    ];
+    $pageLabel = $routeNameToPageLabel[$currentRoute?->getName()] ?? null;
 @endphp
 
 <header class="flex items-center justify-between border-b border-line bg-surface px-6 py-4">
-    <div class="text-sm text-muted">
-        {{ $guild?->name ?? 'Dashboard' }}
+    <div class="flex items-center gap-2 text-sm">
+        <span class="text-muted">{{ $guild?->name ?? 'Burrow' }}</span>
+        @if ($pageLabel)
+            <span class="text-muted">/</span>
+            <span class="font-semibold text-ink">{{ $pageLabel }}</span>
+        @endif
     </div>
 
     <div class="flex items-center gap-3">
         @if ($administeredGuilds->isNotEmpty())
-            <select
-                onchange="if (this.value) { window.location.href = this.value }"
-                class="rounded-control border border-line bg-canvas px-3 py-1.5 text-sm text-ink"
-            >
-                <option value="">Switch guild&hellip;</option>
-                @foreach ($administeredGuilds as $option)
-                    <option value="{{ GuildSwitchTarget::resolve($currentRoute, $option) }}" @selected($guild?->is($option))>
-                        {{ $option->name }}
-                    </option>
-                @endforeach
-            </select>
+            <div class="relative">
+                <select
+                    onchange="if (this.value) { window.location.href = this.value }"
+                    class="appearance-none rounded-pill border border-line bg-canvas py-1.5 pl-4 pr-9 text-sm text-ink"
+                >
+                    <option value="">Switch guild&hellip;</option>
+                    @foreach ($administeredGuilds as $option)
+                        <option value="{{ GuildSwitchTarget::resolve($currentRoute, $option) }}" @selected($guild?->is($option))>
+                            {{ $option->name }}
+                        </option>
+                    @endforeach
+                </select>
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"
+                     class="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" />
+                </svg>
+            </div>
         @endif
 
         <button
             type="button"
             onclick="window.burrowToggleTheme()"
             aria-label="Toggle dark/light theme"
-            class="flex h-9 w-9 items-center justify-center rounded-control border border-line text-muted hover:bg-surface-hover hover:text-ink"
+            class="flex h-9 w-9 items-center justify-center rounded-pill border border-line text-muted hover:bg-surface-hover hover:text-ink"
         >
             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="h-5 w-5 hidden light:block">
                 <path stroke-linecap="round" stroke-linejoin="round" d="M12 3v2.25m6.364.386-1.591 1.591M21 12h-2.25m-.386 6.364-1.591-1.591M12 18.75V21m-4.773-4.227-1.591 1.591M5.25 12H3m4.227-4.773L5.636 5.636M15.75 12a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0z" />

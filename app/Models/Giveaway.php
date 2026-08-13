@@ -26,6 +26,7 @@ class Giveaway extends Model
         'collection_theme_id',
         'channel_id',
         'duration_minutes',
+        'scheduled_start_at',
         'status',
         'discord_message_id',
         'starts_at',
@@ -36,6 +37,7 @@ class Giveaway extends Model
     {
         return [
             'duration_minutes' => 'integer',
+            'scheduled_start_at' => 'datetime',
             'starts_at' => 'datetime',
             'ends_at' => 'datetime',
         ];

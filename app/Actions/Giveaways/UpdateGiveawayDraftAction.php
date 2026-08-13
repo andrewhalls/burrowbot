@@ -8,22 +8,22 @@ use App\Models\Giveaway;
 use InvalidArgumentException;
 
 /**
- * Updates a giveaway's channel/collection-theme/duration. Only permitted
- * while the giveaway is still `draft` - see openspec specs/giveaway-lifecycle
- * - "Giveaway configuration immutability once started".
+ * Edits a still-`draft` giveaway's fields. Refuses once the giveaway has
+ * left `draft`, per `giveaway-lifecycle` - "Giveaway configuration
+ * immutability once started".
  */
 class UpdateGiveawayDraftAction
 {
+    /**
+     * @param  array<string, mixed>  $attributes
+     */
     public function execute(Giveaway $giveaway, array $attributes): Giveaway
     {
         if (! $giveaway->isDraft()) {
-            throw new InvalidArgumentException('A giveaway can only be edited while it is still a draft.');
+            throw new InvalidArgumentException('Only a draft giveaway can be edited.');
         }
 
-        $giveaway->fill(array_intersect_key(
-            $attributes,
-            array_flip(['collection_theme_id', 'channel_id', 'duration_minutes']),
-        ))->save();
+        $giveaway->update($attributes);
 
         return $giveaway;
     }

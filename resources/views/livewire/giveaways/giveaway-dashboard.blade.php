@@ -1,5 +1,13 @@
 <div class="space-y-4">
-    <h2 class="text-lg font-semibold">Entrants</h2>
+    <div class="flex items-center justify-between">
+        <h2 class="text-lg font-semibold text-ink">Entrants</h2>
+        @if ($giveaway->isDraft())
+            <button type="button" wire:click="start" wire:confirm="Start this popup giveaway now?"
+                    class="rounded-pill bg-accent hover:bg-accent-hover px-4 py-2 text-sm font-medium text-accent-ink">
+                Start popup giveaway
+            </button>
+        @endif
+    </div>
 
     <div class="flex flex-wrap gap-3">
         <input type="text" wire:model.live.debounce.300ms="search" placeholder="Search by member&hellip;"

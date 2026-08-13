@@ -24,6 +24,8 @@ See proposal.md - Why. Relevant existing pieces this design builds on:
 ## Decisions
 
 ### Decision 1: One `StartGiveawayAction`, called by both the manual button and the scheduled command
+**Revised during implementation** (see note below) - the actual codebase already had `App\Jobs\PostGiveawayMessage` (a `ShouldQueue` job, scaffolded in v1 alongside `CloseGiveawayMessage` but never dispatched from anywhere) and a pre-written `StartGiveawayActionTest` expecting it to be used. The action dispatches that job onto the outbound queue - matching `CloseExpiredGiveaways`/`CloseGiveawayMessage`'s existing pattern exactly - rather than creating the `DiscordOutboundAction` row inline:
+
 ```php
 class StartGiveawayAction
 {
@@ -33,7 +35,7 @@ class StartGiveawayAction
             $locked = Giveaway::query()->lockForUpdate()->findOrFail($giveaway->id);
 
             if (! $locked->isDraft()) {
-                return $locked; // idempotent no-op - already started (or closed)
+                throw new InvalidArgumentException('Only a draft giveaway can be started.');
             }
 
             $startedAt = now();
@@ -44,25 +46,20 @@ class StartGiveawayAction
                 'ends_at' => $startedAt->clone()->addMinutes($locked->duration_minutes),
             ]);
 
-            DiscordOutboundAction::query()->create([
-                'type' => DiscordOutboundAction::TYPE_POST_GIVEAWAY_MESSAGE,
-                'giveaway_id' => $locked->id,
-                'payload' => [
-                    'channel_id' => $locked->channel_id,
-                    'collection_theme_name' => $locked->collectionTheme->name,
-                    'ends_at' => $locked->ends_at->toIso8601String(),
-                ],
-                'status' => DiscordOutboundAction::STATUS_PENDING,
-            ]);
+            PostGiveawayMessage::dispatch($locked)->onQueue(Config::string('discord.outbound_queue'));
 
             return $locked;
         });
     }
 }
 ```
-The `lockForUpdate` + re-check-`isDraft()`-inside-the-lock pattern (same as `CloseAndDrawStandardGiveawayOccurrenceAction`) makes this safe to call from both a user-driven button click and a scheduled command without a race double-posting: whichever transaction acquires the row lock first wins, and the second sees `status` already `active` and no-ops.
+
+**Note on the throw-vs-no-op revision**: the pre-written test also expected `execute()` to throw `InvalidArgumentException` for a non-draft giveaway, not silently no-op as originally drafted here. The row lock still prevents a double-post between a racing manual click and the scheduled command - whichever transaction wins the lock starts it - but the loser now throws instead of quietly returning. `giveaways:post-due` (Decision 2) catches this per-giveaway so one race doesn't abort the whole batch.
 
 **Alternative considered**: separate "start now" and "start scheduled" code paths. Rejected - they do the exact same thing (post + transition + set timestamps); the only difference is what triggers the call, which belongs in the caller (a Livewire action vs. a console command), not duplicated business logic.
+
+### Decision 1a: `UpdateGiveawayDraftAction` (discovered during implementation, not in the original proposal)
+A pre-written `UpdateGiveawayDraftActionTest` was already in the repo, expecting `App\Actions\Giveaways\UpdateGiveawayDraftAction::execute(Giveaway $giveaway, array $attributes): Giveaway` - editing a still-`draft` giveaway's fields, throwing `InvalidArgumentException` once it's left `draft` (enforcing `giveaway-lifecycle` - "Giveaway configuration immutability once started"). Added as backend infrastructure to satisfy it. Per proposal.md's non-goals, no UI screen is wired up to it in this change - it exists as a tested, ready-to-use action for a future edit screen.
 
 ### Decision 2: The scheduled command filters on `scheduled_start_at <= now()` explicitly - not a blind "post everything pending" sweep
 ```php

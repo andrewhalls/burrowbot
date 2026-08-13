@@ -8,6 +8,7 @@ use App\Livewire\Events\EventIndex;
 use App\Livewire\Events\OccurrenceRoster;
 use App\Livewire\Giveaways\CreateGiveaway;
 use App\Livewire\Giveaways\GiveawayDashboard;
+use App\Livewire\Giveaways\GiveawayIndex;
 use App\Livewire\Guilds\GuildSettings;
 use App\Livewire\StandardGiveaways\OccurrenceDashboard;
 use App\Livewire\StandardGiveaways\StandardGiveawayIndex;
@@ -36,6 +37,7 @@ Route::middleware('auth')->group(function () {
     Route::get('/guilds/{guild}/event-role-sets', EventRoleSetIndex::class)->name('guilds.event-role-sets.index');
     Route::get('/guilds/{guild}/events', EventIndex::class)->name('guilds.events.index');
     Route::get('/guilds/{guild}/event-occurrences/{occurrence}', OccurrenceRoster::class)->name('guilds.event-occurrences.show');
+    Route::get('/guilds/{guild}/giveaways', GiveawayIndex::class)->name('guilds.giveaways.index');
     Route::get('/guilds/{guild}/giveaways/create', CreateGiveaway::class)->name('guilds.giveaways.create');
     Route::get('/guilds/{guild}/giveaways/{giveaway}', GiveawayDashboard::class)->name('guilds.giveaways.show');
     Route::get('/guilds/{guild}/standard-giveaways', StandardGiveawayIndex::class)->name('guilds.standard-giveaways.index');
