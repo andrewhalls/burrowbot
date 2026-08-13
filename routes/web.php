@@ -1,0 +1,42 @@
+<?php
+
+use App\Http\Controllers\Auth\DiscordAuthController;
+use App\Livewire\CollectionThemes\CollectionThemeIndex;
+use App\Livewire\EventRoleSets\EventRoleSetIndex;
+use App\Livewire\Events\EventIndex;
+use App\Livewire\Events\OccurrenceRoster;
+use App\Livewire\Giveaways\CreateGiveaway;
+use App\Livewire\Giveaways\GiveawayDashboard;
+use App\Livewire\Guilds\GuildSettings;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Route;
+
+Route::get('/', function () {
+    return Auth::check() ? redirect()->route('dashboard') : redirect()->route('login');
+});
+
+Route::middleware('guest')->group(function () {
+    Route::view('/login', 'auth.login')->name('login');
+    Route::get('/auth/discord/redirect', [DiscordAuthController::class, 'redirect'])->name('auth.discord.redirect');
+    Route::get('/auth/discord/callback', [DiscordAuthController::class, 'callback'])->name('auth.discord.callback');
+});
+
+Route::middleware('auth')->group(function () {
+    Route::view('/dashboard', 'dashboard')->name('dashboard');
+
+    Route::get('/guilds/{guild}/settings', GuildSettings::class)->name('guilds.settings');
+    Route::get('/guilds/{guild}/themes', CollectionThemeIndex::class)->name('guilds.themes.index');
+    Route::get('/guilds/{guild}/event-role-sets', EventRoleSetIndex::class)->name('guilds.event-role-sets.index');
+    Route::get('/guilds/{guild}/events', EventIndex::class)->name('guilds.events.index');
+    Route::get('/guilds/{guild}/event-occurrences/{occurrence}', OccurrenceRoster::class)->name('guilds.event-occurrences.show');
+    Route::get('/guilds/{guild}/giveaways/create', CreateGiveaway::class)->name('guilds.giveaways.create');
+    Route::get('/guilds/{guild}/giveaways/{giveaway}', GiveawayDashboard::class)->name('guilds.giveaways.show');
+
+    Route::post('/logout', function () {
+        Auth::logout();
+        request()->session()->invalidate();
+        request()->session()->regenerateToken();
+
+        return redirect()->route('login');
+    })->name('logout');
+});

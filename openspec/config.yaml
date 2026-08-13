@@ -1,0 +1,93 @@
+schema: spec-driven
+
+# Project context (optional)
+# This is shown to AI when creating artifacts.
+context: |
+  Product: "Burrow" - a Discord event management and bot platform.
+  A Laravel web app + a persistent Discord gateway bot work together to run
+  server events, and in particular "pop-up giveaways": a message posted in a
+  Discord channel with a "Join Giveaway" button; each entrant is instantly
+  assigned a random item from a collection theme's prize list; the giveaway auto-closes
+  after an admin-configured duration; admins get a searchable/filterable
+  dashboard of entrants and what they won, to hand items out.
+
+  Tech stack & architecture:
+  - Backend: Laravel (latest LTS-track version, PHP 8.3+), MySQL 8.
+  - Admin dashboard: Livewire + Blade (server-rendered, no separate SPA/API
+    layer for the dashboard itself). Tailwind CSS for styling.
+  - Discord integration: a persistent Node.js gateway bot process
+    (discord.js) is the only thing that talks to Discord's Gateway/REST API.
+    It authenticates to Laravel's internal API with a service token and is
+    the sole writer of Discord-facing state (posting/editing messages,
+    disabling buttons, sending ephemeral replies). Laravel never talks to
+    Discord directly; the bot never touches MySQL directly - all state lives
+    behind Laravel's internal API so business logic (entry validation, random
+    item assignment, expiry) has one source of truth.
+  - Multi-guild (multi-tenant) from day one: every domain model that isn't
+    global is scoped by `guild_id`. Admin users are authorized per-guild via
+    Discord OAuth + the roles Discord reports for that guild (or an
+    explicit allow-list), never a single global admin flag.
+  - Auth for the dashboard: Laravel Socialite (Discord OAuth driver).
+  - Testing: Pest, with feature tests hitting real Eloquent models/SQLite or
+    MySQL test DB (no mocking the database), and unit tests for pure logic
+    (e.g. random item assignment, expiry rules). Every new capability must
+    ship with tests covering its scenarios.
+  - Code conventions: PSR-12, strict types, Form Requests for validation,
+    Actions/Service classes for business logic (keep controllers and
+    Livewire components thin), Eloquent policies for authorization,
+    database factories for every model, queued jobs for anything that calls
+    an external system (Discord REST calls, closing a giveaway).
+  - Collection themes are their own first-class resource (not hardcoded):
+    admins create a "collection theme" (e.g. "Retro Arcade"), attach a list
+    of prize items to it, and a giveaway picks one collection theme's item
+    list as its prize pool.
+  - Events: admins define a title/description/channel and a reusable "event
+    role set" (e.g. "Raid Roles": Tank/Healer/DPS, each role independently
+    uncapped/capped/capped-with-waitlist); an event can be one-off or
+    recurring via a full custom recurrence rule, and each occurrence gets
+    its own independent signup roster, posted to Discord as either a new
+    thread per occurrence or a new plain message per occurrence. Members
+    pick a role (or Not Attending) per occurrence, changeable freely up
+    until that occurrence's start time.
+  - Standard giveaways (in progress): a second, distinct giveaway type
+    alongside the pop-up giveaway. Unlike the pop-up giveaway (short timer,
+    one random item per entrant from a whole collection theme), a standard
+    giveaway has one or more specific pre-set prize items (picked by
+    searching across existing collection themes' items, not a whole theme),
+    an eligibility restriction (booster-only and/or specific Discord
+    role(s), combinable), a configurable winner count (default 1), and a
+    staff-set end time (can be far in the future, e.g. a week) at which the
+    system randomly draws that many winners from eligible entrants and
+    announces them - no per-entrant instant prize like the pop-up giveaway.
+    Reuses the Events recurrence engine (RRULE, occurrence generation) so a
+    giveaway can auto-repost on a schedule (e.g. "every Friday").
+
+# Per-artifact rules (optional)
+rules:
+  proposal:
+    - Include a "Non-goals" section listing what v1 explicitly excludes
+    - Call out multi-guild scoping implications for every capability
+  design:
+    - Document the Laravel <-> bot process communication contract (internal
+      API endpoints, auth, and which side owns which responsibility)
+    - Document the random item assignment algorithm and how it stays fair
+      when the prize list is shorter than the number of entrants
+    - Document how giveaway expiry is enforced authoritatively (not just
+      client-side/button-disable) so a late click can never win
+    - "For any change touching events: document the recurrence rule format,
+      how/when occurrences are generated and posted, and the waitlist
+      promotion algorithm (ordering, what triggers a promotion)"
+  tasks:
+    - Every task group that adds a model must include a task for its
+      migration, factory, and Pest tests
+    - Every task group that adds a Livewire component must include a task
+      for its Pest/Livewire test
+
+# Per-operation guidance (optional)
+operations:
+  apply:
+    guidance:
+      - Keep test summaries concise
+  archive:
+    guidance:
+      - Summarize the archive outcome before finishing

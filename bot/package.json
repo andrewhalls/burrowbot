@@ -1,0 +1,20 @@
+{
+  "name": "burrow-bot",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Burrow's persistent Discord gateway bot process. Relays Discord gateway events to the Laravel internal API and executes outbound Discord actions Laravel requests.",
+  "main": "src/index.js",
+  "scripts": {
+    "start": "node src/index.js",
+    "dev": "node --watch src/index.js",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "discord.js": "^14.16.3",
+    "dotenv": "^16.4.5"
+  },
+  "devDependencies": {
+    "vitest": "^4.1.10"
+  }
+}

@@ -1,0 +1,505 @@
+openapi: 3.1.0
+info:
+  title: Burrow Internal Bot API
+  version: "1.0.0"
+  license:
+    name: Proprietary
+    identifier: LicenseRef-Proprietary
+  description: |
+    Internal HTTP API exposed by the Burrow Laravel application, consumed
+    exclusively by the Burrow Discord gateway bot process (Node.js/discord.js).
+
+    This is **not** a public or dashboard-facing API. The admin dashboard
+    (giveaways, themes, entrant search/fulfilment) is served directly by
+    Laravel/Livewire and is out of scope for this document.
+
+    See `openspec/changes/add-discord-giveaway-platform/design.md` for the
+    architectural rationale (Decision 1: bot <-> Laravel communication
+    contract) that this contract implements.
+servers:
+  - url: https://{host}/internal
+    variables:
+      host:
+        default: burrow.example.test
+security:
+  - botServiceToken: []
+tags:
+  - name: guilds
+    description: Guild lifecycle sync (bot joins/leaves/renames a Discord guild)
+  - name: members
+    description: Per-guild Discord member directory sync
+  - name: entries
+    description: Giveaway join/entry processing
+  - name: recovery
+    description: State the bot needs to rebuild after a restart/reconnect
+  - name: outbound-actions
+    description: Discord-facing actions Laravel needs the bot to perform
+  - name: event-signups
+    description: Role signup / Not Attending processing for event occurrences
+
+paths:
+  /guilds:
+    post:
+      tags: [guilds]
+      summary: Register a guild the bot has just joined
+      operationId: createGuild
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [discord_guild_id, name]
+              properties:
+                discord_guild_id:
+                  type: string
+                  description: Discord's snowflake ID for the guild
+                name:
+                  type: string
+      responses:
+        "201":
+          description: Guild registered (or already existed and was left unchanged)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Guild"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "422":
+          $ref: "#/components/responses/ValidationError"
+
+  /guilds/{guildDiscordId}:
+    patch:
+      tags: [guilds]
+      summary: Update a guild's known state (rename, or mark inactive on bot removal)
+      operationId: updateGuild
+      parameters:
+        - $ref: "#/components/parameters/GuildDiscordId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                is_active:
+                  type: boolean
+                  description: Set to false when the bot is removed from the guild
+      responses:
+        "200":
+          description: Guild updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Guild"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /guilds/{guildDiscordId}/members/{discordUserId}:
+    put:
+      tags: [members]
+      summary: Upsert a member's directory record for a guild
+      description: >-
+        Idempotent. Called opportunistically by the bot whenever it observes
+        an interaction from a member, so the member directory stays current
+        without a separate full-guild sync.
+      operationId: upsertGuildMember
+      parameters:
+        - $ref: "#/components/parameters/GuildDiscordId"
+        - name: discordUserId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [username]
+              properties:
+                username:
+                  type: string
+                avatar_url:
+                  type: [string, "null"]
+                  format: uri
+      responses:
+        "200":
+          description: Member record created or updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Member"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          description: Guild not known to Laravel
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /giveaways/active:
+    get:
+      tags: [recovery]
+      summary: List every active giveaway, for bot startup/reconnect recovery
+      description: >-
+        Called once when the bot process starts or its gateway connection is
+        re-established, so it can rebuild its in-memory
+        discord_message_id -> giveaway_id routing table without re-posting
+        any giveaway that is already active.
+      operationId: listActiveGiveaways
+      responses:
+        "200":
+          description: All giveaways currently in `active` status, across every guild
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ActiveGiveaway"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /giveaways/{giveawayId}/entries:
+    post:
+      tags: [entries]
+      summary: Process a "Join Giveaway" click
+      description: >-
+        Validates the giveaway is active and not expired, enforces one entry
+        per member, and assigns a random item per the algorithm in
+        design.md §3. The bot maps the response directly to the ephemeral
+        Discord reply - it must not re-implement any of this logic itself.
+      operationId: joinGiveaway
+      parameters:
+        - name: giveawayId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [discord_user_id, discord_username]
+              properties:
+                discord_user_id:
+                  type: string
+                discord_username:
+                  type: string
+      responses:
+        "200":
+          description: >-
+            Entry processed. `status` distinguishes a fresh win from a
+            repeat click or a too-late click; the bot uses `status` (not the
+            HTTP code) to pick the reply text.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EntryResult"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /outbound-actions:
+    get:
+      tags: [outbound-actions]
+      summary: Fetch pending Discord-facing actions Laravel needs performed
+      description: >-
+        Polled by the bot on a short interval (target 2-5s). Returns actions
+        such as "post this giveaway message" or "edit this message to show
+        the giveaway closed."
+      operationId: listOutboundActions
+      parameters:
+        - name: since
+          in: query
+          required: false
+          description: Only return actions created after this cursor/id
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Pending outbound actions, oldest first
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/OutboundAction"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /outbound-actions/{actionId}/ack:
+    post:
+      tags: [outbound-actions]
+      summary: Acknowledge an outbound action was executed successfully
+      operationId: ackOutboundAction
+      parameters:
+        - $ref: "#/components/parameters/ActionId"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                discord_message_id:
+                  type: string
+                  description: Required when acking a `post_giveaway_message` action
+      responses:
+        "200":
+          description: Action marked complete
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OutboundAction"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /outbound-actions/{actionId}/fail:
+    post:
+      tags: [outbound-actions]
+      summary: Report an outbound action failed, for Laravel's queue retry/backoff
+      operationId: failOutboundAction
+      parameters:
+        - $ref: "#/components/parameters/ActionId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [reason]
+              properties:
+                reason:
+                  type: string
+      responses:
+        "200":
+          description: Failure recorded; Laravel's queue governs retry/backoff
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OutboundAction"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /event-occurrences/{occurrenceId}/signups:
+    post:
+      tags: [event-signups]
+      summary: Process a role selection or Not Attending click on an event occurrence
+      description: >-
+        If `event_role_id` is present, processes a role signup (capacity/
+        waitlist/single-vs-multiple-role rules apply). If omitted, marks the
+        member Not Attending, clearing any role signups they held. The bot
+        maps the response directly to the ephemeral Discord reply - it must
+        not re-implement any of this logic itself. See
+        openspec/specs/event-signups.
+      operationId: signUpForEventOccurrence
+      parameters:
+        - name: occurrenceId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [discord_user_id, discord_username]
+              properties:
+                discord_user_id:
+                  type: string
+                discord_username:
+                  type: string
+                event_role_id:
+                  type: integer
+                  description: Omit to mark the member Not Attending instead of selecting a role
+      responses:
+        "200":
+          description: >-
+            Signup processed. `status` distinguishes a confirmed role from a
+            waitlisted, rejected, or Not Attending outcome.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SignupResult"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "422":
+          $ref: "#/components/responses/ValidationError"
+
+components:
+  securitySchemes:
+    botServiceToken:
+      type: http
+      scheme: bearer
+      description: >-
+        A single long-lived shared secret (BOT_SERVICE_TOKEN) used only by
+        the bot process - not a per-user token. See design.md Decision 1.
+
+  parameters:
+    GuildDiscordId:
+      name: guildDiscordId
+      in: path
+      required: true
+      schema:
+        type: string
+    ActionId:
+      name: actionId
+      in: path
+      required: true
+      schema:
+        type: integer
+
+  responses:
+    Unauthorized:
+      description: Missing or invalid bot service token
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+    ValidationError:
+      description: Request failed validation
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+
+  schemas:
+    ErrorResponse:
+      type: object
+      properties:
+        message:
+          type: string
+        errors:
+          type: object
+          additionalProperties:
+            type: array
+            items:
+              type: string
+
+    Guild:
+      type: object
+      properties:
+        id:
+          type: integer
+        discord_guild_id:
+          type: string
+        name:
+          type: string
+        is_active:
+          type: boolean
+        default_channel_id:
+          type: [string, "null"]
+
+    Member:
+      type: object
+      properties:
+        id:
+          type: integer
+        guild_id:
+          type: integer
+        discord_user_id:
+          type: string
+        username:
+          type: string
+        avatar_url:
+          type: [string, "null"]
+
+    ActiveGiveaway:
+      type: object
+      properties:
+        id:
+          type: integer
+        guild_discord_id:
+          type: string
+        channel_id:
+          type: string
+        discord_message_id:
+          type: [string, "null"]
+          description: Null if the "post" outbound action hasn't been acked yet
+        ends_at:
+          type: string
+          format: date-time
+
+    EntryResult:
+      type: object
+      required: [status]
+      properties:
+        status:
+          type: string
+          enum: [won, already_entered, expired]
+        item:
+          type: [object, "null"]
+          description: Present when status is `won` or `already_entered`
+          properties:
+            id:
+              type: integer
+            name:
+              type: string
+
+    OutboundAction:
+      type: object
+      properties:
+        id:
+          type: integer
+        type:
+          type: string
+          enum:
+            - post_giveaway_message
+            - close_giveaway_message
+            - post_event_occurrence_thread
+            - post_event_occurrence_message
+        giveaway_id:
+          type: [integer, "null"]
+          description: Set for giveaway-posting action types, null for event-posting types
+        event_occurrence_id:
+          type: [integer, "null"]
+          description: Set for event-posting action types, null for giveaway-posting types
+        payload:
+          type: object
+          description: >-
+            Action-specific data. For post_event_occurrence_thread/message:
+            channel_id, title, description, scheduled_start_at, and a
+            `roles` array of { id, name } for the signup controls.
+          additionalProperties: true
+
+    SignupResult:
+      type: object
+      required: [status]
+      properties:
+        status:
+          type: string
+          enum: [confirmed, waitlisted, rejected, not_attending]
+        role:
+          type: [object, "null"]
+          description: Present when status is `confirmed` or `waitlisted`
+          properties:
+            id:
+              type: integer
+            name:
+              type: string
+        reason:
+          type: [string, "null"]
+          description: Present when status is `rejected`
