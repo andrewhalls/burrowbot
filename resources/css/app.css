@@ -3,7 +3,55 @@
 @source '../../vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php';
 @source '../../storage/framework/views/*.php';
 
+/**
+ * Dark is the unconditioned default (see the token block below), so this
+ * defines a `light:` variant for the comparatively rare light-mode
+ * overrides, inverted from Tailwind's usual `dark:` convention.
+ */
+@custom-variant light (&:where([data-theme='light'], [data-theme='light'] *));
+
+/**
+ * Design tokens for the dashboard shell (openspec/specs/dashboard-theme).
+ * Dark is the unconditioned default (design.md Decision 2) - values here are
+ * dark-mode values. `:root[data-theme="light"]` below overrides them for
+ * light mode. Referencing these via Tailwind's generated `bg-canvas`,
+ * `text-ink`, etc. utilities (rather than literal `neutral-950` classes
+ * scattered across every view) is what keeps every card/button/badge
+ * visually consistent by construction (design.md Decision 5).
+ */
 @theme {
     --font-sans: 'Instrument Sans', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji',
         'Segoe UI Symbol', 'Noto Color Emoji';
+
+    --color-canvas: #0a0a0c;
+    --color-surface: #16161a;
+    --color-surface-hover: #1e1e23;
+    --color-line: #27272e;
+    --color-ink: #f4f4f5;
+    --color-muted: #9a9aa5;
+    --color-accent: #3b82f6;
+    --color-accent-hover: #2563eb;
+    --color-accent-ink: #ffffff;
+    --color-danger: #f87171;
+    --color-success: #34d399;
+    --color-warning: #fbbf24;
+
+    --radius-control: 0.75rem;
+    --radius-card: 1.25rem;
+    --radius-pill: 9999px;
+}
+
+:root[data-theme='light'] {
+    --color-canvas: #f3f4f6;
+    --color-surface: #ffffff;
+    --color-surface-hover: #f9fafb;
+    --color-line: #e5e7eb;
+    --color-ink: #18181b;
+    --color-muted: #6b7280;
+    --color-accent: #4f46e5;
+    --color-accent-hover: #4338ca;
+    --color-accent-ink: #ffffff;
+    --color-danger: #dc2626;
+    --color-success: #059669;
+    --color-warning: #d97706;
 }

@@ -79,6 +79,22 @@ These come straight out of `design.md` and exist to prevent an agent from
   (`declare(strict_types=1);`), MySQL 8.
 - **Dashboard:** Livewire + Blade, Tailwind CSS. No separate SPA/API layer
   for dashboard pages — Livewire components query Eloquent directly.
+- **Dashboard shell is automatic — never build a page-specific nav/header.**
+  Every full-page Livewire component is auto-wrapped in
+  `resources/views/components/layout.blade.php` (via
+  `config('livewire.component_layout') = 'components.layout'`), which
+  renders the sidebar, top bar, guild switcher, and dark/light theme
+  (`resources/views/components/dashboard-sidebar.blade.php` and
+  `dashboard-topbar.blade.php`). A new page gets this shell for free simply
+  by being a normal full-page Livewire component — do not add your own
+  header/nav, and do not override the layout (`#[Layout(...)]`) or build a
+  page as a plain Blade route, either of which silently bypasses the shell
+  (see `openspec/specs/dashboard-home` - "Shell applies automatically to
+  every page, present and future"). If a guild-scoped page's `mount()`
+  doesn't itself type-hint `Guild $guild` (e.g. it binds a more specific
+  child model like an occurrence), the layout still resolves the current
+  guild via `Guild::find(request()->route('guild'))` as a fallback — see
+  the comment in `layout.blade.php` before changing that logic.
 - **Bot process:** Node.js + discord.js, lives in `bot/` as its own package,
   deployed as a separate long-running process from the Laravel app.
 - **Auth:** Laravel Socialite (Discord OAuth driver) for dashboard staff.
