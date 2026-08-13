@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Auth\DiscordAuthController;
 use App\Livewire\CollectionThemes\CollectionThemeIndex;
+use App\Livewire\Dashboard\DashboardHome;
 use App\Livewire\EventRoleSets\EventRoleSetIndex;
 use App\Livewire\Events\EventIndex;
 use App\Livewire\Events\OccurrenceRoster;
@@ -19,12 +20,16 @@ Route::get('/', function () {
 
 Route::middleware('guest')->group(function () {
     Route::view('/login', 'auth.login')->name('login');
-    Route::get('/auth/discord/redirect', [DiscordAuthController::class, 'redirect'])->name('auth.discord.redirect');
-    Route::get('/auth/discord/callback', [DiscordAuthController::class, 'callback'])->name('auth.discord.callback');
 });
 
+// Not guest-only: an already-authenticated user re-runs this flow via the
+// dashboard's "check again" action (design.md - Decision 3) after inviting
+// the bot, to re-sync guild_admins without a full sign-out/sign-in.
+Route::get('/auth/discord/redirect', [DiscordAuthController::class, 'redirect'])->name('auth.discord.redirect');
+Route::get('/auth/discord/callback', [DiscordAuthController::class, 'callback'])->name('auth.discord.callback');
+
 Route::middleware('auth')->group(function () {
-    Route::view('/dashboard', 'dashboard')->name('dashboard');
+    Route::get('/dashboard', DashboardHome::class)->name('dashboard');
 
     Route::get('/guilds/{guild}/settings', GuildSettings::class)->name('guilds.settings');
     Route::get('/guilds/{guild}/themes', CollectionThemeIndex::class)->name('guilds.themes.index');

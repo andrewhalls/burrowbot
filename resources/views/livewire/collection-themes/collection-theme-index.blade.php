@@ -1,4 +1,6 @@
 <div class="space-y-6">
+    <x-guild-nav :guild="$guild" active="themes" />
+
     <div class="flex items-center justify-between">
         <h2 class="text-lg font-semibold">Themed collections</h2>
         <button type="button" wire:click="$toggle('showCreateForm')" class="text-sm text-indigo-400 hover:text-indigo-300">
