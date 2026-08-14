@@ -77,3 +77,16 @@
 :root[data-theme='light'] .rounded-card {
     box-shadow: 0 1px 2px rgb(0 0 0 / 0.03), 0 10px 24px -10px rgb(0 0 0 / 0.10);
 }
+
+/**
+ * Dashboard spacing convention (openspec specs/dashboard-style-guide).
+ * Reuse these exact Tailwind utilities everywhere rather than picking
+ * ad hoc values per screen - this is a written convention, not enforced
+ * by a linter, so it only holds if new screens actually follow it:
+ *
+ *   - Card/tile padding:            p-4
+ *   - Gap between cards/tiles:      gap-3 (flex/grid) or space-y-3
+ *   - Gap between major sections:   space-y-6
+ *   - List-detail column gap:       gap-6 (see <x-list-detail-shell>)
+ *   - Pill badge padding:           px-2.5 py-1 (status) / px-4 py-2 (button)
+ */

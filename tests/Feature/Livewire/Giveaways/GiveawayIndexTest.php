@@ -59,6 +59,18 @@ it('renders cleanly for a giveaway with no description or image', function () {
         ->assertOk();
 });
 
+it('renders the scheduled start time with a UTC ISO8601 attribute for client-side local-time conversion', function () {
+    $guild = Guild::factory()->create();
+    $theme = CollectionTheme::factory()->for($guild)->create();
+    $scheduledFor = now()->addDay()->startOfMinute();
+    Giveaway::factory()->for($theme, 'collectionTheme')->for($guild)->scheduledFor($scheduledFor)->create();
+    $staff = actingGiveawayStaffFor($guild);
+
+    Livewire::actingAs($staff)
+        ->test(GiveawayIndex::class, ['guild' => $guild])
+        ->assertSee('data-utc-datetime="'.$scheduledFor->toIso8601String().'"', false);
+});
+
 it('never lists a giveaway belonging to another guild', function () {
     $guild = Guild::factory()->create();
     $theme = CollectionTheme::factory()->for($guild)->create(['name' => 'Mine']);
@@ -86,6 +98,45 @@ it('starts a draft giveaway from the list', function () {
         ->call('start', $giveaway->id);
 
     expect($giveaway->fresh()->isActive())->toBeTrue();
+});
+
+it('shows the giveaway dashboard in the detail panel when a tile is selected', function () {
+    $guild = Guild::factory()->create();
+    $theme = CollectionTheme::factory()->for($guild)->create();
+    $giveaway = Giveaway::factory()->for($theme, 'collectionTheme')->for($guild)->create();
+    $staff = actingGiveawayStaffFor($guild);
+
+    Livewire::actingAs($staff)
+        ->test(GiveawayIndex::class, ['guild' => $guild])
+        ->assertSee('Select an item from the list')
+        ->call('select', $giveaway->id)
+        ->assertDontSee('Select an item from the list')
+        ->assertSeeLivewire('giveaways.giveaway-dashboard');
+});
+
+it('returns to the list-only view on deselect', function () {
+    $guild = Guild::factory()->create();
+    $theme = CollectionTheme::factory()->for($guild)->create();
+    $giveaway = Giveaway::factory()->for($theme, 'collectionTheme')->for($guild)->create();
+    $staff = actingGiveawayStaffFor($guild);
+
+    Livewire::actingAs($staff)
+        ->test(GiveawayIndex::class, ['guild' => $guild])
+        ->call('select', $giveaway->id)
+        ->call('deselect')
+        ->assertSee('Select an item from the list');
+});
+
+it('refuses to select a giveaway belonging to a different guild', function () {
+    $guild = Guild::factory()->create();
+    $otherGuild = Guild::factory()->create();
+    $otherGiveaway = Giveaway::factory()->for($otherGuild)->create();
+    $staff = actingGiveawayStaffFor($guild);
+
+    Livewire::actingAs($staff)
+        ->test(GiveawayIndex::class, ['guild' => $guild])
+        ->call('select', $otherGiveaway->id)
+        ->assertSee('Select an item from the list');
 });
 
 it('denies mounting for a guild the user does not admin', function () {

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Livewire\Events;
 
 use App\Actions\Events\CreateEventAction;
+use App\Livewire\Concerns\ResolvesBrowserTimezone;
 use App\Models\Event;
 use App\Models\EventRoleSet;
 use App\Models\Guild;
@@ -16,6 +17,8 @@ use Livewire\Component;
 
 class CreateEvent extends Component
 {
+    use ResolvesBrowserTimezone;
+
     public Guild $guild;
 
     public string $title = '';
@@ -31,8 +34,6 @@ class CreateEvent extends Component
     public string $startDate = '';
 
     public string $startTime = '';
-
-    public string $timezone;
 
     public string $recurrenceType = 'none';
 
@@ -52,7 +53,6 @@ class CreateEvent extends Component
         $this->authorize('manage', $guild);
 
         $this->guild = $guild;
-        $this->timezone = config('app.timezone');
         $this->channelId = (string) ($guild->default_channel_id ?? '');
     }
 
@@ -71,13 +71,17 @@ class CreateEvent extends Component
             'postingMode' => ['required', 'in:'.Event::POSTING_MODE_THREAD.','.Event::POSTING_MODE_MESSAGE],
             'startDate' => ['required', 'date'],
             'startTime' => ['required', 'date_format:H:i'],
-            'timezone' => ['required', 'timezone'],
             'recurrenceType' => ['required', 'in:none,daily,weekly,monthly'],
             'recurrenceInterval' => ['required', 'integer', 'min:1'],
             'recurrenceEndType' => ['required', 'in:never,on_date,after_count'],
         ]);
 
-        $startAt = Carbon::parse("{$this->startDate} {$this->startTime}", $this->timezone);
+        // Deliberately NOT ->utc() here - see CreateStandardGiveaway::save()
+        // for why: $startAt/$recurrenceEndDate must keep the admin's local
+        // wall-clock numbers, paired with the separately-passed timezone
+        // below, for ExpandRecurrenceRule to regenerate future occurrences
+        // at the same local time.
+        $startAt = Carbon::parse("{$this->startDate} {$this->startTime}", $this->resolvedTimezone());
 
         try {
             $recurrenceRule = $buildRecurrenceRule(
@@ -85,7 +89,7 @@ class CreateEvent extends Component
                 $this->recurrenceInterval,
                 $this->recurrenceDaysOfWeek,
                 $this->recurrenceEndType,
-                $this->recurrenceEndDate !== '' ? Carbon::parse($this->recurrenceEndDate, $this->timezone) : null,
+                $this->recurrenceEndDate !== '' ? Carbon::parse($this->recurrenceEndDate, $this->resolvedTimezone()) : null,
                 $this->recurrenceEndCount,
                 $startAt,
             );
@@ -106,7 +110,7 @@ class CreateEvent extends Component
             $validated['postingMode'],
             $recurrenceRule,
             $startAt,
-            $this->timezone,
+            $this->resolvedTimezone(),
         );
 
         $this->dispatch('event-created', eventId: $event->id);

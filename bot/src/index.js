@@ -5,6 +5,7 @@ import { createDiscordAdapter, JOIN_GIVEAWAY_BUTTON_ID } from './discordAdapter.
 import { EVENT_NOT_ATTENDING_PREFIX, EVENT_ROLE_SELECT_PREFIX } from './eventOccurrenceMessage.js'
 import { STANDARD_GIVEAWAY_ENTER_PREFIX } from './standardGiveawayOccurrenceMessage.js'
 import { postableChannels } from './discordChannels.js'
+import { postableRoles } from './discordRoles.js'
 import { createMessageRoutingStore } from './messageRoutingStore.js'
 import { startOutboundPoller } from './outboundPoller.js'
 import { buildJoinInteractionReplyOptions } from './joinInteractionReply.js'
@@ -51,6 +52,17 @@ async function syncGuildChannels(guild) {
   }
 }
 
+// Same idempotent full-list shape as syncGuildChannels - see design.md
+// (add-discord-role-picker) Decision 2.
+async function syncGuildRoles(guild) {
+  try {
+    const roles = postableRoles([...guild.roles.cache.values()], guild.id)
+    await laravelClient.syncGuildRoles(guild.id, roles)
+  } catch (error) {
+    console.error(`Failed to sync roles for guild ${guild.id}:`, error)
+  }
+}
+
 client.on(Events.GuildCreate, async (guild) => {
   try {
     await laravelClient.guildJoined(guild.id, guild.name)
@@ -60,6 +72,7 @@ client.on(Events.GuildCreate, async (guild) => {
   }
 
   await syncGuildChannels(guild)
+  await syncGuildRoles(guild)
 })
 
 client.on(Events.ChannelCreate, async (channel) => {
@@ -72,6 +85,18 @@ client.on(Events.ChannelUpdate, async (_oldChannel, newChannel) => {
 
 client.on(Events.ChannelDelete, async (channel) => {
   if (channel.guild) await syncGuildChannels(channel.guild)
+})
+
+client.on(Events.GuildRoleCreate, async (role) => {
+  if (role.guild) await syncGuildRoles(role.guild)
+})
+
+client.on(Events.GuildRoleUpdate, async (_oldRole, newRole) => {
+  if (newRole.guild) await syncGuildRoles(newRole.guild)
+})
+
+client.on(Events.GuildRoleDelete, async (role) => {
+  if (role.guild) await syncGuildRoles(role.guild)
 })
 
 client.on(Events.GuildDelete, async (guild) => {
@@ -190,16 +215,19 @@ client.once(Events.ClientReady, async (readyClient) => {
   const guildNames = [...readyClient.guilds.cache.values()].map((guild) => guild.name)
   console.log(`In ${guildNames.length} guild(s): ${guildNames.join(', ') || '(none)'}`)
 
-  // Real-time gateway events (ChannelCreate/Update/Delete) are the primary
-  // channel-sync path - this periodic sweep is only a fallback safety net
-  // for an event missed while briefly disconnected, hence the long
-  // interval (design.md Decision 1: minutes, not seconds).
+  // Real-time gateway events (ChannelCreate/Update/Delete,
+  // GuildRoleCreate/Update/Delete) are the primary sync path - this
+  // periodic sweep is only a fallback safety net for an event missed while
+  // briefly disconnected, hence the long interval (design.md Decision 1:
+  // minutes, not seconds).
   for (const guild of readyClient.guilds.cache.values()) {
     await syncGuildChannels(guild)
+    await syncGuildRoles(guild)
   }
   setInterval(() => {
     for (const guild of readyClient.guilds.cache.values()) {
       syncGuildChannels(guild)
+      syncGuildRoles(guild)
     }
   }, Number(process.env.CHANNEL_RESYNC_INTERVAL_MS ?? 30 * 60 * 1000))
 

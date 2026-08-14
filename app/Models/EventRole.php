@@ -22,6 +22,7 @@ class EventRole extends Model
     protected $fillable = [
         'event_role_set_id',
         'name',
+        'discord_role_id',
         'sort_order',
         'capacity_mode',
         'capacity',

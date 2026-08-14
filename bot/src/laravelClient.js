@@ -54,6 +54,13 @@ export function createLaravelClient({ baseUrl, serviceToken, fetchImpl = fetch }
       })
     },
 
+    syncGuildRoles(discordGuildId, roles) {
+      return request(`/internal/guilds/${discordGuildId}/roles`, {
+        method: 'PUT',
+        body: JSON.stringify({ roles }),
+      })
+    },
+
     joinGiveaway(giveawayId, discordUserId, discordUsername) {
       return request(`/internal/giveaways/${giveawayId}/entries`, {
         method: 'POST',

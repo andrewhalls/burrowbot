@@ -30,6 +30,8 @@ tags:
     description: Per-guild Discord member directory sync
   - name: channels
     description: Per-guild Discord channel directory sync (powers the dashboard's channel picker)
+  - name: roles
+    description: Per-guild Discord role directory sync (powers the dashboard's role picker)
   - name: entries
     description: Giveaway join/entry processing
   - name: recovery
@@ -193,6 +195,62 @@ paths:
                 type: array
                 items:
                   $ref: "#/components/schemas/DiscordChannel"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          description: Guild not known to Laravel
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "422":
+          $ref: "#/components/responses/ValidationError"
+
+  /guilds/{guildDiscordId}/roles:
+    put:
+      tags: [roles]
+      summary: Replace a guild's synced role list
+      description: >-
+        Idempotent full-list sync, not a per-event patch: Laravel replaces
+        this guild's entire synced role set to match exactly what's given
+        (upserts everything present, deletes anything not present). The
+        bot calls this with its current, already-in-sync role cache on
+        guild join, on any role create/update/delete event, and on a
+        periodic fallback timer. The `@everyone` role and Discord-managed
+        roles (bot integration roles, the auto-created Server Booster
+        role) are filtered out bot-side before calling this. See
+        `openspec/changes/add-discord-role-picker/design.md` Decision 2.
+      operationId: syncGuildRoles
+      parameters:
+        - $ref: "#/components/parameters/GuildDiscordId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [roles]
+              properties:
+                roles:
+                  type: array
+                  description: The guild's complete current synced role list. An empty array deletes every previously synced role for this guild.
+                  items:
+                    type: object
+                    required: [discord_role_id, name]
+                    properties:
+                      discord_role_id:
+                        type: string
+                      name:
+                        type: string
+      responses:
+        "200":
+          description: Role list synced
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/DiscordRole"
         "401":
           $ref: "#/components/responses/Unauthorized"
         "404":
@@ -553,6 +611,18 @@ components:
         guild_id:
           type: integer
         discord_channel_id:
+          type: string
+        name:
+          type: string
+
+    DiscordRole:
+      type: object
+      properties:
+        id:
+          type: integer
+        guild_id:
+          type: integer
+        discord_role_id:
           type: string
         name:
           type: string

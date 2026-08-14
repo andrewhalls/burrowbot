@@ -17,6 +17,8 @@ class EventIndex extends Component
 
     public bool $showCreateForm = false;
 
+    public ?int $selectedId = null;
+
     public function mount(Guild $guild): void
     {
         $this->authorize('view', $guild);
@@ -39,6 +41,18 @@ class EventIndex extends Component
         $updateStatus->execute($event, $status);
     }
 
+    public function select(int $eventId): void
+    {
+        $exists = Event::query()->where('guild_id', $this->guild->id)->where('id', $eventId)->exists();
+
+        $this->selectedId = $exists ? $eventId : null;
+    }
+
+    public function deselect(): void
+    {
+        $this->selectedId = null;
+    }
+
     public function render(): View
     {
         $events = $this->guild->events()
@@ -46,8 +60,15 @@ class EventIndex extends Component
             ->orderByDesc('created_at')
             ->get();
 
+        $selectedEvent = $this->selectedId
+            ? Event::query()
+                ->with(['eventRoleSet', 'occurrences' => fn ($query) => $query->orderByDesc('scheduled_start_at')->limit(5)])
+                ->find($this->selectedId)
+            : null;
+
         return view('livewire.events.event-index', [
             'events' => $events,
+            'selectedEvent' => $selectedEvent,
         ]);
     }
 }

@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace App\Livewire\EventRoleSets;
 
 use App\Actions\EventRoleSets\CreateEventRoleSetAction;
+use App\Livewire\Concerns\SearchesDiscordRoles;
+use App\Models\DiscordRole;
 use App\Models\EventRole;
 use App\Models\Guild;
 use Illuminate\Contracts\View\View;
@@ -13,13 +15,15 @@ use Livewire\Component;
 
 class CreateEventRoleSet extends Component
 {
+    use SearchesDiscordRoles;
+
     public Guild $guild;
 
     public string $name = '';
 
     public bool $allowMultipleRoles = false;
 
-    /** @var list<array{name: string, capacity_mode: string, capacity: int|null}> */
+    /** @var list<array{name: string, discord_role_id: string, capacity_mode: string, capacity: int|null}> */
     public array $roles = [];
 
     public function mount(Guild $guild): void
@@ -27,12 +31,40 @@ class CreateEventRoleSet extends Component
         $this->authorize('manage', $guild);
 
         $this->guild = $guild;
-        $this->roles = $this->blankRoles();
     }
 
-    public function addRoleRow(): void
+    public function addDiscordRole(string $discordRoleId): void
     {
-        $this->roles[] = ['name' => '', 'capacity_mode' => EventRole::CAPACITY_UNCAPPED, 'capacity' => null];
+        if (in_array($discordRoleId, $this->selectedDiscordRoleIds(), true)) {
+            return;
+        }
+
+        $role = DiscordRole::query()
+            ->where('guild_id', $this->guild->id)
+            ->where('discord_role_id', $discordRoleId)
+            ->first();
+
+        if (! $role) {
+            return;
+        }
+
+        $this->roles[] = [
+            'name' => $role->name,
+            'discord_role_id' => $role->discord_role_id,
+            'capacity_mode' => EventRole::CAPACITY_UNCAPPED,
+            'capacity' => null,
+        ];
+    }
+
+    public function addRoleSetPreset(int $roleSetId): void
+    {
+        $preset = $this->guild->eventRoleSets()->with('roles')->findOrFail($roleSetId);
+
+        foreach ($preset->roles as $role) {
+            if ($role->discord_role_id) {
+                $this->addDiscordRole($role->discord_role_id);
+            }
+        }
     }
 
     public function removeRoleRow(int $index): void
@@ -63,20 +95,22 @@ class CreateEventRoleSet extends Component
         }
 
         $this->reset(['name', 'allowMultipleRoles']);
-        $this->roles = $this->blankRoles();
+        $this->roles = [];
 
         $this->dispatch('event-role-set-created');
     }
 
-    /**
-     * @return list<array{name: string, capacity_mode: string, capacity: int|null}>
-     */
-    private function blankRoles(): array
+    protected function guildForRoleSearch(): Guild
     {
-        return [
-            ['name' => '', 'capacity_mode' => EventRole::CAPACITY_UNCAPPED, 'capacity' => null],
-            ['name' => '', 'capacity_mode' => EventRole::CAPACITY_UNCAPPED, 'capacity' => null],
-        ];
+        return $this->guild;
+    }
+
+    /**
+     * @return list<string>
+     */
+    protected function selectedDiscordRoleIds(): array
+    {
+        return array_column($this->roles, 'discord_role_id');
     }
 
     public function render(): View

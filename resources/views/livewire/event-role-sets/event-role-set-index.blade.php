@@ -10,13 +10,29 @@
         <livewire:event-role-sets.create-event-role-set :guild="$guild" :key="'create-role-set-'.$guild->id" />
     @endif
 
-    <ul class="divide-y divide-line rounded-card border border-line">
-        @forelse ($roleSets as $roleSet)
-            <li class="p-4">
-                <livewire:event-role-sets.manage-event-role-set-roles :role-set="$roleSet" :key="'role-set-roles-'.$roleSet->id" />
-            </li>
-        @empty
-            <li class="p-4 text-sm text-muted">No role sets yet.</li>
-        @endforelse
-    </ul>
+    <x-list-detail-shell :selected="$selectedRoleSet !== null">
+        <x-slot:list>
+            <div class="space-y-3">
+                @forelse ($roleSets as $roleSet)
+                    <div wire:key="role-set-tile-{{ $roleSet->id }}" wire:click="select({{ $roleSet->id }})"
+                         @class([
+                            'rounded-card border p-4 cursor-pointer hover:bg-surface-hover transition-colors',
+                            'border-accent' => $selectedRoleSet?->id === $roleSet->id,
+                            'border-line' => $selectedRoleSet?->id !== $roleSet->id,
+                         ])>
+                        <p class="font-medium text-ink truncate">{{ $roleSet->name }}</p>
+                        <p class="text-xs text-muted">{{ $roleSet->roles_count }} {{ Str::plural('role', $roleSet->roles_count) }}</p>
+                    </div>
+                @empty
+                    <x-list-detail-empty message="No role sets yet." />
+                @endforelse
+            </div>
+        </x-slot:list>
+
+        <x-slot:detail>
+            @if ($selectedRoleSet)
+                <livewire:event-role-sets.manage-event-role-set-roles :role-set="$selectedRoleSet" :key="'role-set-detail-'.$selectedRoleSet->id" />
+            @endif
+        </x-slot:detail>
+    </x-list-detail-shell>
 </div>

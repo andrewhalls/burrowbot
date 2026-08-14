@@ -21,9 +21,7 @@
     </ul>
 
     @if ($editable)
-        <div class="flex gap-2">
-            <input type="text" wire:model="newRoleName" placeholder="New role"
-                   class="flex-1 rounded-control bg-surface border border-line px-3 py-1.5 text-sm">
+        <div class="flex gap-2 mb-2">
             <select wire:model="newRoleCapacityMode" class="rounded-control bg-surface border border-line px-2 py-1.5 text-sm">
                 <option value="uncapped">Uncapped</option>
                 <option value="capped">Capped</option>
@@ -33,8 +31,9 @@
                 <input type="number" min="1" wire:model="newRoleCapacity" placeholder="Cap"
                        class="w-20 rounded-control bg-surface border border-line px-2 py-1.5 text-sm">
             @endif
-            <button type="button" wire:click="addRole" class="rounded-control bg-surface-hover hover:bg-surface-hover px-3 py-1.5 text-sm">Add</button>
         </div>
-        @error('newRoleName') <p class="text-danger text-xs mt-1">{{ $message }}</p> @enderror
+        @error('newRoleCapacityMode') <p class="text-danger text-xs mt-1">{{ $message }}</p> @enderror
+
+        @include('partials.discord-role-search-results')
     @endif
 </div>

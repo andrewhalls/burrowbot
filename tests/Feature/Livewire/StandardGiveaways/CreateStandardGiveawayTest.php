@@ -5,8 +5,12 @@ declare(strict_types=1);
 use App\Livewire\StandardGiveaways\CreateStandardGiveaway;
 use App\Models\CollectionTheme;
 use App\Models\DiscordChannel;
+use App\Models\DiscordRole;
+use App\Models\EventRole;
+use App\Models\EventRoleSet;
 use App\Models\Guild;
 use App\Models\StandardGiveaway;
+use App\Models\StandardGiveawayRequiredRole;
 use App\Models\User;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
@@ -34,6 +38,77 @@ it('shows an empty (not broken) channel picker when the guild has no synced chan
         ->assertSee('No synced channels yet.');
 });
 
+it('adds a role to the selection via search, scoped to the guild', function () {
+    $guild = Guild::factory()->create();
+    $role = DiscordRole::factory()->for($guild)->create(['name' => 'Officer']);
+    $otherGuild = Guild::factory()->create();
+    DiscordRole::factory()->for($otherGuild)->create(['name' => 'OtherOfficer']);
+    $staff = actingEventStaffFor($guild);
+
+    $component = Livewire::actingAs($staff)
+        ->test(CreateStandardGiveaway::class, ['guild' => $guild])
+        ->set('roleSearch', 'Officer')
+        ->assertSee('Officer')
+        ->assertDontSee('OtherOfficer')
+        ->call('addDiscordRole', $role->discord_role_id);
+
+    expect($component->get('selectedRoleIds'))->toBe([$role->discord_role_id]);
+});
+
+it('removes a role chip from the selection', function () {
+    $guild = Guild::factory()->create();
+    $role = DiscordRole::factory()->for($guild)->create();
+    $staff = actingEventStaffFor($guild);
+
+    $component = Livewire::actingAs($staff)
+        ->test(CreateStandardGiveaway::class, ['guild' => $guild])
+        ->call('addDiscordRole', $role->discord_role_id)
+        ->call('removeDiscordRole', $role->discord_role_id);
+
+    expect($component->get('selectedRoleIds'))->toBe([]);
+});
+
+it('bulk-adds roles from an event role set preset, de-duplicated against the current selection', function () {
+    $guild = Guild::factory()->create();
+    $roleA = DiscordRole::factory()->for($guild)->create();
+    $roleB = DiscordRole::factory()->for($guild)->create();
+    $roleSet = EventRoleSet::factory()->for($guild)->create();
+    EventRole::factory()->for($roleSet, 'eventRoleSet')->withDiscordRoleId($roleA->discord_role_id)->create();
+    EventRole::factory()->for($roleSet, 'eventRoleSet')->withDiscordRoleId($roleB->discord_role_id)->create();
+    $staff = actingEventStaffFor($guild);
+
+    $component = Livewire::actingAs($staff)
+        ->test(CreateStandardGiveaway::class, ['guild' => $guild])
+        ->call('addDiscordRole', $roleA->discord_role_id)
+        ->call('addRoleSetPreset', $roleSet->id);
+
+    expect($component->get('selectedRoleIds'))->toEqualCanonicalizing([$roleA->discord_role_id, $roleB->discord_role_id]);
+});
+
+it('persists the selected roles as StandardGiveawayRequiredRole rows on save', function () {
+    $guild = Guild::factory()->create();
+    $theme = CollectionTheme::factory()->for($guild)->withItems(1)->create();
+    $item = $theme->items->first();
+    $role = DiscordRole::factory()->for($guild)->create();
+    $staff = actingEventStaffFor($guild);
+
+    Livewire::actingAs($staff)
+        ->test(CreateStandardGiveaway::class, ['guild' => $guild])
+        ->set('title', 'Role Restricted')
+        ->set('description', 'desc')
+        ->set('channelId', '123456')
+        ->set('startDate', now()->addWeek()->toDateString())
+        ->set('startTime', '20:00')
+        ->call('addPrizeItem', $item->id)
+        ->call('addDiscordRole', $role->discord_role_id)
+        ->call('save')
+        ->assertHasNoErrors();
+
+    $giveaway = StandardGiveaway::query()->where('title', 'Role Restricted')->sole();
+    expect(StandardGiveawayRequiredRole::query()->where('standard_giveaway_id', $giveaway->id)->pluck('discord_role_id')->all())
+        ->toBe([$role->discord_role_id]);
+});
+
 it('creates a one-off standard giveaway', function () {
     $guild = Guild::factory()->create();
     $theme = CollectionTheme::factory()->for($guild)->withItems(1)->create(['name' => 'Retro Arcade']);
@@ -55,6 +130,53 @@ it('creates a one-off standard giveaway', function () {
     $giveaway = StandardGiveaway::query()->where('title', 'Nitro Friday')->first();
     expect($giveaway)->not->toBeNull()
         ->and($giveaway->occurrences)->toHaveCount(1);
+});
+
+it('records the browser timezone alongside the wall-clock start time, unconverted', function () {
+    $guild = Guild::factory()->create();
+    $theme = CollectionTheme::factory()->for($guild)->withItems(1)->create();
+    $item = $theme->items->first();
+    $staff = actingEventStaffFor($guild);
+    $future = now()->addWeek();
+
+    Livewire::actingAs($staff)
+        ->test(CreateStandardGiveaway::class, ['guild' => $guild])
+        ->set('title', 'Timezone Test')
+        ->set('description', 'desc')
+        ->set('channelId', '123456')
+        ->set('browserTimezone', 'America/New_York')
+        ->set('startDate', $future->toDateString())
+        ->set('startTime', '20:00')
+        ->call('addPrizeItem', $item->id)
+        ->call('save')
+        ->assertHasNoErrors();
+
+    $giveaway = StandardGiveaway::query()->where('title', 'Timezone Test')->sole();
+    expect($giveaway->recurrence_timezone)->toBe('America/New_York')
+        ->and($giveaway->recurrence_start_at->format('Y-m-d H:i'))->toBe("{$future->toDateString()} 20:00");
+});
+
+it('falls back to UTC when browserTimezone is invalid', function () {
+    $guild = Guild::factory()->create();
+    $theme = CollectionTheme::factory()->for($guild)->withItems(1)->create();
+    $item = $theme->items->first();
+    $staff = actingEventStaffFor($guild);
+    $future = now()->addWeek();
+
+    Livewire::actingAs($staff)
+        ->test(CreateStandardGiveaway::class, ['guild' => $guild])
+        ->set('title', 'Invalid TZ Test')
+        ->set('description', 'desc')
+        ->set('channelId', '123456')
+        ->set('browserTimezone', 'Not/AZone')
+        ->set('startDate', $future->toDateString())
+        ->set('startTime', '20:00')
+        ->call('addPrizeItem', $item->id)
+        ->call('save')
+        ->assertHasNoErrors();
+
+    $giveaway = StandardGiveaway::query()->where('title', 'Invalid TZ Test')->sole();
+    expect($giveaway->recurrence_timezone)->toBe('UTC');
 });
 
 it('creates a standard giveaway with an image', function () {

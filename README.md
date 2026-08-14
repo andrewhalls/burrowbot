@@ -171,8 +171,11 @@ from Laravel's `/internal/*` API (documented in [`openapi.yaml`](openapi.yaml)).
 ## Running both together locally
 
 1. Start the Laravel app (`php artisan serve`) and its queue worker
-   (`php artisan queue:work`) — outbound Discord actions are dispatched
-   through the queue.
+   (`php artisan queue:work --queue=discord-outbound,default`) — outbound
+   Discord actions are dispatched onto the named `discord-outbound` queue
+   (`config/discord.php`'s `outbound_queue`, overridable via
+   `DISCORD_OUTBOUND_QUEUE`), not Laravel's default queue, so a bare
+   `queue:work` with no `--queue` flag will never pick them up.
 2. Start the scheduler: `php artisan schedule:work`. This runs
    `giveaways:close-expired`, `events:generate-occurrences`,
    `events:post-due-occurrences`, `standard-giveaways:generate-occurrences`,
@@ -268,7 +271,7 @@ Install Supervisor (`apt install supervisor` on Debian/Ubuntu), then create
 ```ini
 [program:burrow-queue]
 process_name=%(program_name)s_%(process_num)02d
-command=php /path/to/burrow/artisan queue:work --sleep=3 --tries=3 --max-time=3600
+command=php /path/to/burrow/artisan queue:work --queue=discord-outbound,default --sleep=3 --tries=3 --max-time=3600
 directory=/path/to/burrow
 autostart=true
 autorestart=true
@@ -343,7 +346,9 @@ sudo systemctl restart burrow-bot   # after a deploy
 ```
 
 The queue worker follows the same shape (`ExecStart=/usr/bin/php
-/path/to/burrow/artisan queue:work --sleep=3 --tries=3`). The scheduler
+/path/to/burrow/artisan queue:work --queue=discord-outbound,default --sleep=3
+--tries=3`) — same `--queue` requirement as the Supervisor version above.
+The scheduler
 still uses cron either way — it's a one-shot command that runs every
 minute and exits, not a long-running process, so it was never a systemd-vs-cron
 choice to begin with.

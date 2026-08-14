@@ -60,6 +60,18 @@ describe('createLaravelClient', () => {
     expect(JSON.parse(options.body)).toEqual({ channels: [{ discord_channel_id: '1', name: 'general' }] })
   })
 
+  it('PUTs the full role list when syncing guild roles', async () => {
+    const fetchImpl = fakeFetch([])
+    const client = createLaravelClient({ baseUrl: 'http://laravel.test', serviceToken: 't', fetchImpl })
+
+    await client.syncGuildRoles('999', [{ discord_role_id: '1', name: 'Moderator' }])
+
+    const [url, options] = fetchImpl.mock.calls[0]
+    expect(url).toBe('http://laravel.test/internal/guilds/999/roles')
+    expect(options.method).toBe('PUT')
+    expect(JSON.parse(options.body)).toEqual({ roles: [{ discord_role_id: '1', name: 'Moderator' }] })
+  })
+
   it('posts eligibility data when submitting a standard giveaway entry', async () => {
     const fetchImpl = fakeFetch({ status: 'entered' })
     const client = createLaravelClient({ baseUrl: 'http://laravel.test', serviceToken: 't', fetchImpl })

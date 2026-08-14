@@ -52,6 +52,14 @@ class Guild extends Model
     }
 
     /**
+     * @return HasMany<DiscordRole, $this>
+     */
+    public function roles(): HasMany
+    {
+        return $this->hasMany(DiscordRole::class);
+    }
+
+    /**
      * @return HasMany<CollectionTheme, $this>
      */
     public function collectionThemes(): HasMany

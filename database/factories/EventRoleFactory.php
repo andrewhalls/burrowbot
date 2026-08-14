@@ -41,4 +41,9 @@ class EventRoleFactory extends Factory
             'capacity' => $capacity,
         ]);
     }
+
+    public function withDiscordRoleId(string $id): static
+    {
+        return $this->state(['discord_role_id' => $id]);
+    }
 }

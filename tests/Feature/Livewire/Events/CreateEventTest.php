@@ -33,6 +33,51 @@ it('shows an empty (not broken) channel picker when the guild has no synced chan
         ->assertSee('No synced channels yet.');
 });
 
+it('records the browser timezone alongside the wall-clock start time, unconverted', function () {
+    $guild = Guild::factory()->create();
+    $roleSet = EventRoleSet::factory()->for($guild)->withRoles(1)->create();
+    $staff = actingEventStaffFor($guild);
+    $future = now()->addWeek();
+
+    Livewire::actingAs($staff)
+        ->test(CreateEvent::class, ['guild' => $guild])
+        ->set('title', 'Timezone Test')
+        ->set('description', 'desc')
+        ->set('channelId', '123456')
+        ->set('eventRoleSetId', $roleSet->id)
+        ->set('browserTimezone', 'America/New_York')
+        ->set('startDate', $future->toDateString())
+        ->set('startTime', '20:00')
+        ->call('save')
+        ->assertHasNoErrors();
+
+    $event = Event::query()->where('title', 'Timezone Test')->sole();
+    expect($event->recurrence_timezone)->toBe('America/New_York')
+        ->and($event->recurrence_start_at->format('Y-m-d H:i'))->toBe("{$future->toDateString()} 20:00");
+});
+
+it('falls back to UTC when browserTimezone is invalid', function () {
+    $guild = Guild::factory()->create();
+    $roleSet = EventRoleSet::factory()->for($guild)->withRoles(1)->create();
+    $staff = actingEventStaffFor($guild);
+    $future = now()->addWeek();
+
+    Livewire::actingAs($staff)
+        ->test(CreateEvent::class, ['guild' => $guild])
+        ->set('title', 'Invalid TZ Test')
+        ->set('description', 'desc')
+        ->set('channelId', '123456')
+        ->set('eventRoleSetId', $roleSet->id)
+        ->set('browserTimezone', 'Not/AZone')
+        ->set('startDate', $future->toDateString())
+        ->set('startTime', '20:00')
+        ->call('save')
+        ->assertHasNoErrors();
+
+    $event = Event::query()->where('title', 'Invalid TZ Test')->sole();
+    expect($event->recurrence_timezone)->toBe('UTC');
+});
+
 it('creates a one-off event', function () {
     $guild = Guild::factory()->create();
     $roleSet = EventRoleSet::factory()->for($guild)->withRoles(1)->create();

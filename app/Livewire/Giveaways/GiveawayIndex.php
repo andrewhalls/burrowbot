@@ -13,14 +13,18 @@ use Livewire\Component;
 
 /**
  * Guild-scoped list of popup giveaways - status, entrant count, and a
- * Start action for drafts. See openspec specs/giveaway-admin-dashboard -
- * "Giveaway list view".
+ * Start action for drafts. Selecting a giveaway opens its entrant/fulfilment
+ * dashboard in a side panel rather than navigating away. See openspec
+ * specs/giveaway-admin-dashboard - "Giveaway list view";
+ * specs/dashboard-list-detail-layout.
  */
 class GiveawayIndex extends Component
 {
     public Guild $guild;
 
     public bool $showCreateForm = false;
+
+    public ?int $selectedId = null;
 
     public function mount(Guild $guild): void
     {
@@ -33,6 +37,18 @@ class GiveawayIndex extends Component
     public function closeCreateForm(): void
     {
         $this->showCreateForm = false;
+    }
+
+    public function select(int $giveawayId): void
+    {
+        $exists = Giveaway::query()->where('guild_id', $this->guild->id)->where('id', $giveawayId)->exists();
+
+        $this->selectedId = $exists ? $giveawayId : null;
+    }
+
+    public function deselect(): void
+    {
+        $this->selectedId = null;
     }
 
     public function start(int $giveawayId, StartGiveawayAction $startGiveaway): void
@@ -53,6 +69,7 @@ class GiveawayIndex extends Component
 
         return view('livewire.giveaways.giveaway-index', [
             'giveaways' => $giveaways,
+            'selectedGiveaway' => $this->selectedId ? $giveaways->firstWhere('id', $this->selectedId) : null,
         ]);
     }
 }

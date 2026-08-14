@@ -44,6 +44,7 @@ class CreateEventRoleSetAction
             foreach ($roles as $index => $role) {
                 $roleSet->roles()->create([
                     'name' => trim($role['name']),
+                    'discord_role_id' => $role['discord_role_id'] ?? null,
                     'sort_order' => $index,
                     'capacity_mode' => $role['capacity_mode'],
                     'capacity' => $role['capacity_mode'] === EventRole::CAPACITY_UNCAPPED

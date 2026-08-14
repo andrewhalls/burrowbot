@@ -1,4 +1,6 @@
 <div class="space-y-6">
+    <x-browser-timezone-input />
+
     <div class="rounded-card border border-line p-4 space-y-4">
         <x-channel-picker :guild="$guild" model="channelId" :value="$channelId" />
 

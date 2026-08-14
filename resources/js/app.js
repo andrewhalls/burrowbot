@@ -62,3 +62,37 @@ document.addEventListener('mousedown', (event) => {
         document.querySelectorAll('[data-channel-picker-list]').forEach((list) => list.classList.add('hidden'))
     }
 })
+
+// Browser-local timezone input + display (openspec specs/browser-local-time).
+// Unlike the channel picker above, these need to actively mutate elements
+// the moment they appear (set a hidden field's initial value; relabel a
+// UTC-timestamp's displayed text) rather than just wait for a user-triggered
+// event - plain `document`-level delegation doesn't cover that. So this
+// re-scans on both the initial page load and every Livewire morph, using
+// Livewire's own `morph.updated` hook (registered once Livewire itself has
+// initialized, since `@vite` loads this script before `@livewireScripts` -
+// see layout.blade.php).
+function applyBrowserLocalTime(root) {
+    const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone
+
+    root.querySelectorAll('[data-browser-timezone-input]').forEach((input) => {
+        if (input.value === timezone) return
+        input.value = timezone
+        input.dispatchEvent(new Event('input', { bubbles: true }))
+    })
+
+    root.querySelectorAll('[data-utc-datetime]').forEach((el) => {
+        const date = new Date(el.dataset.utcDatetime)
+        if (Number.isNaN(date.getTime())) return
+
+        el.textContent = date.toLocaleString(undefined, {
+            dateStyle: 'medium',
+            timeStyle: 'short',
+        })
+    })
+}
+
+document.addEventListener('DOMContentLoaded', () => applyBrowserLocalTime(document))
+document.addEventListener('livewire:init', () => {
+    Livewire.hook('morph.updated', ({ el }) => applyBrowserLocalTime(el))
+})

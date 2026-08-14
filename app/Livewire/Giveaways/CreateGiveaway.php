@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Livewire\Giveaways;
 
 use App\Actions\Giveaways\CreateGiveawayAction;
+use App\Livewire\Concerns\ResolvesBrowserTimezone;
 use App\Models\CollectionTheme;
 use App\Models\Guild;
 use Illuminate\Contracts\View\View;
@@ -14,6 +15,7 @@ use Livewire\WithFileUploads;
 
 class CreateGiveaway extends Component
 {
+    use ResolvesBrowserTimezone;
     use WithFileUploads;
 
     public Guild $guild;
@@ -62,7 +64,7 @@ class CreateGiveaway extends Component
 
         $scheduledStartAt = null;
         if ($this->scheduledStartDate !== '' && $this->scheduledStartTime !== '') {
-            $scheduledStartAt = Carbon::parse("{$this->scheduledStartDate} {$this->scheduledStartTime}", config('app.timezone'));
+            $scheduledStartAt = Carbon::parse("{$this->scheduledStartDate} {$this->scheduledStartTime}", $this->resolvedTimezone())->utc();
 
             if ($scheduledStartAt->isPast()) {
                 $this->addError('scheduledStartDate', 'The scheduled start must be in the future.');

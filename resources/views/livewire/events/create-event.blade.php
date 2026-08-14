@@ -1,4 +1,6 @@
 <div class="rounded-card border border-line p-4 space-y-4 max-w-xl">
+    <x-browser-timezone-input />
+
     <div>
         <label class="block text-sm text-muted mb-1">Title</label>
         <input type="text" wire:model="title" class="w-full rounded-control bg-surface border border-line px-3 py-2 text-sm">
@@ -33,7 +35,7 @@
         </select>
     </div>
 
-    <div class="grid grid-cols-3 gap-3">
+    <div class="grid grid-cols-2 gap-3">
         <div>
             <label class="block text-sm text-muted mb-1">Start date</label>
             <input type="date" wire:model="startDate" class="w-full rounded-control bg-surface border border-line px-3 py-2 text-sm">
@@ -43,11 +45,6 @@
             <label class="block text-sm text-muted mb-1">Start time</label>
             <input type="time" wire:model="startTime" class="w-full rounded-control bg-surface border border-line px-3 py-2 text-sm">
             @error('startTime') <p class="text-danger text-xs mt-1">{{ $message }}</p> @enderror
-        </div>
-        <div>
-            <label class="block text-sm text-muted mb-1">Timezone</label>
-            <input type="text" wire:model="timezone" class="w-full rounded-control bg-surface border border-line px-3 py-2 text-sm">
-            @error('timezone') <p class="text-danger text-xs mt-1">{{ $message }}</p> @enderror
         </div>
     </div>
 

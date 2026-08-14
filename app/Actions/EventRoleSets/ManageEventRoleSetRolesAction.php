@@ -16,7 +16,7 @@ use InvalidArgumentException;
  */
 class ManageEventRoleSetRolesAction
 {
-    public function addRole(EventRoleSet $roleSet, string $name, string $capacityMode, ?int $capacity): EventRole
+    public function addRole(EventRoleSet $roleSet, string $name, ?string $discordRoleId, string $capacityMode, ?int $capacity): EventRole
     {
         $this->ensureEditable($roleSet);
         $this->assertValidCapacity($capacityMode, $capacity);
@@ -31,6 +31,7 @@ class ManageEventRoleSetRolesAction
 
         return $roleSet->roles()->create([
             'name' => $name,
+            'discord_role_id' => $discordRoleId,
             'sort_order' => $nextSortOrder,
             'capacity_mode' => $capacityMode,
             'capacity' => $capacityMode === EventRole::CAPACITY_UNCAPPED ? null : $capacity,

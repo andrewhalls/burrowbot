@@ -10,10 +10,18 @@ use App\Models\EventRoleSet;
 it('adds a role to an editable role set', function () {
     $roleSet = EventRoleSet::factory()->withRoles(1)->create();
 
-    $role = (new ManageEventRoleSetRolesAction)->addRole($roleSet, 'Support', 'uncapped', null);
+    $role = (new ManageEventRoleSetRolesAction)->addRole($roleSet, 'Support', null, 'uncapped', null);
 
     expect($role->name)->toBe('Support')
         ->and($roleSet->roles()->count())->toBe(2);
+});
+
+it('stores the discord_role_id on the added role', function () {
+    $roleSet = EventRoleSet::factory()->withRoles(1)->create();
+
+    $role = (new ManageEventRoleSetRolesAction)->addRole($roleSet, 'Support', '111', 'uncapped', null);
+
+    expect($role->discord_role_id)->toBe('111');
 });
 
 it('removes a role from an editable role set', function () {
@@ -32,7 +40,7 @@ it('blocks adding a role while an open occurrence uses the role set', function (
         ->posted()
         ->create(['scheduled_start_at' => now()->addDay()]);
 
-    expect(fn () => (new ManageEventRoleSetRolesAction)->addRole($roleSet, 'Support', 'uncapped', null))
+    expect(fn () => (new ManageEventRoleSetRolesAction)->addRole($roleSet, 'Support', null, 'uncapped', null))
         ->toThrow(InvalidArgumentException::class);
 
     expect($roleSet->roles()->count())->toBe(1);
@@ -41,7 +49,7 @@ it('blocks adding a role while an open occurrence uses the role set', function (
 it('rejects a capped role with no capacity', function () {
     $roleSet = EventRoleSet::factory()->withRoles(1)->create();
 
-    expect(fn () => (new ManageEventRoleSetRolesAction)->addRole($roleSet, 'Support', 'capped', null))
+    expect(fn () => (new ManageEventRoleSetRolesAction)->addRole($roleSet, 'Support', null, 'capped', null))
         ->toThrow(InvalidArgumentException::class);
 });
 
@@ -53,7 +61,7 @@ it('allows editing again once the occurrence using the role set has started', fu
         ->started()
         ->create();
 
-    $role = (new ManageEventRoleSetRolesAction)->addRole($roleSet, 'Support', 'uncapped', null);
+    $role = (new ManageEventRoleSetRolesAction)->addRole($roleSet, 'Support', null, 'uncapped', null);
 
     expect($role->exists)->toBeTrue();
 });

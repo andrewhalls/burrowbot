@@ -10,6 +10,7 @@ use App\Models\Guild;
 use App\Models\GuildAdmin;
 use App\Models\User;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Storage;
 use Livewire\Livewire;
 
@@ -212,6 +213,52 @@ it('creates a giveaway with a future scheduled start', function () {
     $giveaway = Giveaway::query()->where('guild_id', $guild->id)->sole();
     expect($giveaway->scheduled_start_at)->not->toBeNull()
         ->and($giveaway->isDraft())->toBeTrue();
+});
+
+it('converts a scheduled start entered in a non-UTC browser timezone to UTC for storage', function () {
+    $user = User::factory()->create();
+    $guild = Guild::factory()->create();
+    GuildAdmin::factory()->for($guild)->for($user)->create();
+    $theme = CollectionTheme::factory()->for($guild)->create();
+    $future = now('America/New_York')->addDay();
+
+    Livewire::actingAs($user)
+        ->test(CreateGiveaway::class, ['guild' => $guild])
+        ->set('channelId', '123456')
+        ->set('collectionThemeId', $theme->id)
+        ->set('durationMinutes', 15)
+        ->set('browserTimezone', 'America/New_York')
+        ->set('scheduledStartDate', $future->toDateString())
+        ->set('scheduledStartTime', $future->format('H:i'))
+        ->call('save')
+        ->assertHasNoErrors();
+
+    $giveaway = Giveaway::query()->where('guild_id', $guild->id)->sole();
+    $expectedUtc = Carbon::parse("{$future->toDateString()} {$future->format('H:i')}", 'America/New_York')->utc();
+    expect($giveaway->scheduled_start_at->equalTo($expectedUtc))->toBeTrue();
+});
+
+it('falls back to UTC when browserTimezone is invalid', function () {
+    $user = User::factory()->create();
+    $guild = Guild::factory()->create();
+    GuildAdmin::factory()->for($guild)->for($user)->create();
+    $theme = CollectionTheme::factory()->for($guild)->create();
+    $future = now()->addDay();
+
+    Livewire::actingAs($user)
+        ->test(CreateGiveaway::class, ['guild' => $guild])
+        ->set('channelId', '123456')
+        ->set('collectionThemeId', $theme->id)
+        ->set('durationMinutes', 15)
+        ->set('browserTimezone', 'Not/AZone')
+        ->set('scheduledStartDate', $future->toDateString())
+        ->set('scheduledStartTime', $future->format('H:i'))
+        ->call('save')
+        ->assertHasNoErrors();
+
+    $giveaway = Giveaway::query()->where('guild_id', $guild->id)->sole();
+    $expectedUtc = Carbon::parse("{$future->toDateString()} {$future->format('H:i')}", 'UTC');
+    expect($giveaway->scheduled_start_at->equalTo($expectedUtc))->toBeTrue();
 });
 
 it('rejects a scheduled start in the past', function () {

@@ -12,11 +12,13 @@
 
     <div>
         <label class="block text-sm text-muted mb-1">Roles</label>
+
+        @include('partials.discord-role-search-results')
+
         <div class="space-y-2">
             @foreach ($roles as $index => $role)
-                <div class="flex gap-2 items-start">
-                    <input type="text" wire:model="roles.{{ $index }}.name" placeholder="Role name"
-                           class="flex-1 rounded-control bg-surface border border-line px-3 py-2 text-sm">
+                <div class="flex gap-2 items-center" wire:key="role-row-{{ $role['discord_role_id'] }}">
+                    <span class="flex-1 rounded-control bg-surface border border-line px-3 py-2 text-sm">{{ $role['name'] }}</span>
                     <select wire:model="roles.{{ $index }}.capacity_mode" class="rounded-control bg-surface border border-line px-2 py-2 text-sm">
                         <option value="uncapped">Uncapped</option>
                         <option value="capped">Capped</option>
@@ -26,15 +28,11 @@
                         <input type="number" min="1" wire:model="roles.{{ $index }}.capacity" placeholder="Cap"
                                class="w-20 rounded-control bg-surface border border-line px-2 py-2 text-sm">
                     @endif
-                    @if (count($roles) > 1)
-                        <button type="button" wire:click="removeRoleRow({{ $index }})" class="text-muted hover:text-danger px-2">&times;</button>
-                    @endif
+                    <button type="button" wire:click="removeRoleRow({{ $index }})" class="text-muted hover:text-danger px-2">&times;</button>
                 </div>
             @endforeach
         </div>
         @error('roles') <p class="text-danger text-xs mt-1">{{ $message }}</p> @enderror
-
-        <button type="button" wire:click="addRoleRow" class="mt-2 text-xs text-accent hover:text-accent">+ Add role</button>
     </div>
 
     <button type="button" wire:click="save" class="rounded-control bg-accent hover:bg-accent-hover px-4 py-2 text-sm font-medium">

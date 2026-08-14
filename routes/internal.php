@@ -7,6 +7,7 @@ use App\Http\Controllers\Internal\GiveawayRecoveryController;
 use App\Http\Controllers\Internal\GuildController;
 use App\Http\Controllers\Internal\MemberController;
 use App\Http\Controllers\Internal\OutboundActionController;
+use App\Http\Controllers\Internal\RoleController;
 use App\Http\Controllers\Internal\StandardGiveawayEntryController;
 use Illuminate\Support\Facades\Route;
 
@@ -27,6 +28,7 @@ Route::patch('/guilds/{guild:discord_guild_id}', [GuildController::class, 'updat
 Route::put('/guilds/{guild:discord_guild_id}/members/{discordUserId}', [MemberController::class, 'upsert']);
 
 Route::put('/guilds/{guild:discord_guild_id}/channels', [ChannelController::class, 'sync']);
+Route::put('/guilds/{guild:discord_guild_id}/roles', [RoleController::class, 'sync']);
 
 Route::post('/giveaways/{giveaway}/entries', [GiveawayEntryController::class, 'store']);
 Route::get('/giveaways/active', [GiveawayRecoveryController::class, 'activeGiveaways']);

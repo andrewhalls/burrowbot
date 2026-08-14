@@ -5,7 +5,10 @@ declare(strict_types=1);
 namespace App\Livewire\StandardGiveaways;
 
 use App\Actions\StandardGiveaways\CreateStandardGiveawayAction;
+use App\Livewire\Concerns\ResolvesBrowserTimezone;
+use App\Livewire\Concerns\SearchesDiscordRoles;
 use App\Models\CollectionThemeItem;
+use App\Models\DiscordRole;
 use App\Models\Guild;
 use App\Models\StandardGiveaway;
 use App\Support\Events\BuildRecurrenceRule;
@@ -17,6 +20,8 @@ use Livewire\WithFileUploads;
 
 class CreateStandardGiveaway extends Component
 {
+    use ResolvesBrowserTimezone;
+    use SearchesDiscordRoles;
     use WithFileUploads;
 
     public Guild $guild;
@@ -35,7 +40,8 @@ class CreateStandardGiveaway extends Component
 
     public bool $requiresBooster = false;
 
-    public string $requiredRoleIdsInput = '';
+    /** @var list<string> */
+    public array $selectedRoleIds = [];
 
     public int $durationMinutes = 10080; // one week
 
@@ -47,8 +53,6 @@ class CreateStandardGiveaway extends Component
     public string $startDate = '';
 
     public string $startTime = '';
-
-    public string $timezone;
 
     public string $recurrenceType = 'none';
 
@@ -68,7 +72,6 @@ class CreateStandardGiveaway extends Component
         $this->authorize('manage', $guild);
 
         $this->guild = $guild;
-        $this->timezone = config('app.timezone');
         $this->channelId = (string) ($guild->default_channel_id ?? '');
     }
 
@@ -102,6 +105,57 @@ class CreateStandardGiveaway extends Component
         $this->selectedPrizeItemIds = array_values(array_diff($this->selectedPrizeItemIds, [$itemId]));
     }
 
+    public function addDiscordRole(string $discordRoleId): void
+    {
+        if (! in_array($discordRoleId, $this->selectedRoleIds, true)) {
+            $this->selectedRoleIds[] = $discordRoleId;
+        }
+    }
+
+    public function removeDiscordRole(string $discordRoleId): void
+    {
+        $this->selectedRoleIds = array_values(array_diff($this->selectedRoleIds, [$discordRoleId]));
+    }
+
+    public function addRoleSetPreset(int $roleSetId): void
+    {
+        $preset = $this->guild->eventRoleSets()->with('roles')->findOrFail($roleSetId);
+
+        foreach ($preset->roles as $role) {
+            if ($role->discord_role_id) {
+                $this->addDiscordRole($role->discord_role_id);
+            }
+        }
+    }
+
+    /**
+     * Keyed by discord_role_id, for turning $selectedRoleIds into
+     * human-readable chips in the view.
+     *
+     * @return \Illuminate\Support\Collection<string, DiscordRole>
+     */
+    public function getSelectedRoleModelsProperty()
+    {
+        return DiscordRole::query()
+            ->where('guild_id', $this->guild->id)
+            ->whereIn('discord_role_id', $this->selectedRoleIds)
+            ->get()
+            ->keyBy('discord_role_id');
+    }
+
+    protected function guildForRoleSearch(): Guild
+    {
+        return $this->guild;
+    }
+
+    /**
+     * @return list<string>
+     */
+    protected function selectedDiscordRoleIds(): array
+    {
+        return $this->selectedRoleIds;
+    }
+
     public function save(CreateStandardGiveawayAction $createGiveaway, BuildRecurrenceRule $buildRecurrenceRule): void
     {
         $this->authorize('manage', $this->guild);
@@ -116,7 +170,6 @@ class CreateStandardGiveaway extends Component
             'durationMinutes' => ['required', 'integer', 'min:1'],
             'startDate' => ['required', 'date'],
             'startTime' => ['required', 'date_format:H:i'],
-            'timezone' => ['required', 'timezone'],
             'recurrenceType' => ['required', 'in:none,daily,weekly,monthly'],
             'recurrenceInterval' => ['required', 'integer', 'min:1'],
             'recurrenceEndType' => ['required', 'in:never,on_date,after_count'],
@@ -128,7 +181,14 @@ class CreateStandardGiveaway extends Component
             return;
         }
 
-        $startAt = Carbon::parse("{$this->startDate} {$this->startTime}", $this->timezone);
+        // Deliberately NOT ->utc() here: $startAt/$recurrenceEndDate carry the
+        // admin's local wall-clock numbers (e.g. "20:00"), paired with the
+        // separately-stored recurrence_timezone below - ExpandRecurrenceRule
+        // passes that timezone straight to recurr alongside these same
+        // wall-clock numbers to correctly regenerate future occurrences at
+        // the same local time (DST included). Converting to UTC here would
+        // silently shift every future occurrence by the timezone offset.
+        $startAt = Carbon::parse("{$this->startDate} {$this->startTime}", $this->resolvedTimezone());
 
         try {
             $recurrenceRule = $buildRecurrenceRule(
@@ -136,7 +196,7 @@ class CreateStandardGiveaway extends Component
                 $this->recurrenceInterval,
                 $this->recurrenceDaysOfWeek,
                 $this->recurrenceEndType,
-                $this->recurrenceEndDate !== '' ? Carbon::parse($this->recurrenceEndDate, $this->timezone) : null,
+                $this->recurrenceEndDate !== '' ? Carbon::parse($this->recurrenceEndDate, $this->resolvedTimezone()) : null,
                 $this->recurrenceEndCount,
                 $startAt,
             );
@@ -145,12 +205,6 @@ class CreateStandardGiveaway extends Component
 
             return;
         }
-
-        $requiredRoleIds = collect(preg_split('/[,\s]+/', $this->requiredRoleIdsInput, -1, PREG_SPLIT_NO_EMPTY))
-            ->map(fn ($id) => trim($id))
-            ->filter()
-            ->values()
-            ->all();
 
         $imagePath = $this->image?->store('standard-giveaway-images', 'public');
 
@@ -165,10 +219,10 @@ class CreateStandardGiveaway extends Component
                 $this->requiresBooster,
                 $validated['durationMinutes'],
                 $this->selectedPrizeItemIds,
-                $requiredRoleIds,
+                $this->selectedRoleIds,
                 $recurrenceRule,
                 $startAt,
-                $this->timezone,
+                $this->resolvedTimezone(),
                 $imagePath,
             );
         } catch (InvalidArgumentException $e) {

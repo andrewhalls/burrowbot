@@ -26,6 +26,16 @@ it('creates a role set with its roles in order', function () {
         ->and($roleSet->roles[2]->capacity)->toBeNull();
 });
 
+it('stores the discord_role_id on each created role', function () {
+    $guild = Guild::factory()->create();
+
+    $roleSet = (new CreateEventRoleSetAction)->execute($guild, 'Raid Roles', false, [
+        ['name' => 'Tank', 'discord_role_id' => '111', 'capacity_mode' => 'uncapped', 'capacity' => null],
+    ]);
+
+    expect($roleSet->roles->first()->discord_role_id)->toBe('111');
+});
+
 it('discards blank role rows before validating', function () {
     $guild = Guild::factory()->create();
 
