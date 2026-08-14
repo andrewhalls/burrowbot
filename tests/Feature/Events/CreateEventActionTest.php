@@ -8,6 +8,7 @@ use App\Models\EventOccurrence;
 use App\Models\EventRoleSet;
 use App\Models\Guild;
 use App\Models\User;
+use Illuminate\Support\Carbon;
 
 it('creates a one-off event with a single occurrence immediately', function () {
     $guild = Guild::factory()->create();
@@ -27,6 +28,29 @@ it('creates a one-off event with a single occurrence immediately', function () {
         ->and($occurrence->event_role_set_id)->toBe($roleSet->id)
         ->and($occurrence->scheduled_start_at->timestamp)->toBe($startAt->timestamp)
         ->and($occurrence->status)->toBe(EventOccurrence::STATUS_SCHEDULED);
+});
+
+it('stores the one-off occurrence\'s scheduled_start_at as a true UTC instant, not reinterpreted wall-clock', function () {
+    $guild = Guild::factory()->create();
+    $roleSet = EventRoleSet::factory()->for($guild)->withRoles(1)->create();
+
+    // A wall-clock-in-New-York Carbon (mirrors how CreateEvent::save()
+    // parses the browser's local date/time before ->utc() is deliberately
+    // withheld for the Event.recurrence_start_at field).
+    $localStartAt = Carbon::parse(now()->addWeek()->toDateString().' 20:00', 'America/New_York');
+
+    $event = (new CreateEventAction)->execute(
+        $guild, $roleSet, 'Game Night', 'Come play games', '12345', Event::POSTING_MODE_MESSAGE,
+        null, $localStartAt, 'America/New_York',
+    );
+
+    $occurrence = $event->occurrences->first();
+
+    // The stored instant must match the real moment 8pm Eastern represents
+    // (not the naive "20:00 read back as UTC" bug), and must therefore be
+    // in the future - hasStarted() must be false.
+    expect($occurrence->scheduled_start_at->timestamp)->toBe($localStartAt->clone()->utc()->timestamp)
+        ->and($occurrence->hasStarted())->toBeFalse();
 });
 
 it('records the creator when provided', function () {

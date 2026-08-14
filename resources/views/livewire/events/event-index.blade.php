@@ -20,6 +20,9 @@
                             'border-accent' => $selectedEvent?->id === $event->id,
                             'border-line' => $selectedEvent?->id !== $event->id,
                          ])>
+                        @if ($event->image_url)
+                            <img src="{{ $event->image_url }}" alt="" class="w-full h-20 rounded-control object-cover mb-2">
+                        @endif
                         <p class="font-medium text-ink text-sm truncate">{{ $event->title }}</p>
                         <span @class([
                             'rounded-pill px-2 py-0.5 text-[11px] font-medium shrink-0 self-start mt-1',

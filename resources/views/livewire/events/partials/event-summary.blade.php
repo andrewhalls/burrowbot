@@ -4,6 +4,10 @@
      minimum content needed to avoid an always-empty detail panel
      (design.md Decision 2, add-dashboard-list-detail-layout). --}}
 <div class="rounded-card border border-line p-4 space-y-4">
+    @if ($event->image_url)
+        <img src="{{ $event->image_url }}" alt="" class="w-full h-32 rounded-control object-cover">
+    @endif
+
     <div>
         <h3 class="text-lg font-semibold text-ink">{{ $event->title }}</h3>
         @if ($event->creator)

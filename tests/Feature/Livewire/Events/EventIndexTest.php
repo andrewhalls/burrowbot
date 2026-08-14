@@ -20,6 +20,18 @@ it('lists events for the guild', function () {
         ->assertSee('Game Night');
 });
 
+it('shows an event\'s image on its tile and in the summary panel when set', function () {
+    $guild = Guild::factory()->create();
+    $event = Event::factory()->for($guild)->withImage('event-images/abc.jpg')->create(['title' => 'Game Night']);
+    $staff = actingEventStaffFor($guild);
+
+    Livewire::actingAs($staff)
+        ->test(EventIndex::class, ['guild' => $guild])
+        ->assertSee($event->image_url, false)
+        ->call('select', $event->id)
+        ->assertSee($event->image_url, false);
+});
+
 it('changes an event status', function () {
     $guild = Guild::factory()->create();
     $event = Event::factory()->for($guild)->create(['status' => Event::STATUS_ACTIVE]);

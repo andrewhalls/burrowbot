@@ -62,7 +62,14 @@ class CreateEventAction
                     'channel_id' => $event->channel_id,
                     'posting_mode' => $event->posting_mode,
                     'event_role_set_id' => $event->event_role_set_id,
-                    'scheduled_start_at' => $recurrenceStartAt,
+                    // Unlike Event.recurrence_start_at (deliberately kept as
+                    // wall-clock numbers, paired with recurrence_timezone,
+                    // for ExpandRecurrenceRule), the occurrence's
+                    // scheduled_start_at is compared directly against
+                    // now() (EventOccurrence::hasStarted()) and so must be
+                    // a true UTC instant - ->clone()->utc() here, not the
+                    // shared $recurrenceStartAt itself.
+                    'scheduled_start_at' => $recurrenceStartAt->clone()->utc(),
                     'status' => EventOccurrence::STATUS_SCHEDULED,
                 ]);
             }
