@@ -32,6 +32,33 @@ it('lists popup giveaways for the guild with status and entrant count', function
         ->assertSee('Active');
 });
 
+it('shows a giveaway\'s description and image when set', function () {
+    $guild = Guild::factory()->create();
+    $theme = CollectionTheme::factory()->for($guild)->create();
+    Giveaway::factory()->for($theme, 'collectionTheme')->for($guild)
+        ->withDescription('Win big prizes!')
+        ->withImage('giveaway-images/abc.jpg')
+        ->create();
+    $staff = actingGiveawayStaffFor($guild);
+
+    Livewire::actingAs($staff)
+        ->test(GiveawayIndex::class, ['guild' => $guild])
+        ->assertSee('Win big prizes!')
+        ->assertSee('giveaway-images/abc.jpg');
+});
+
+it('renders cleanly for a giveaway with no description or image', function () {
+    $guild = Guild::factory()->create();
+    $theme = CollectionTheme::factory()->for($guild)->create(['name' => 'Plain Theme']);
+    Giveaway::factory()->for($theme, 'collectionTheme')->for($guild)->create();
+    $staff = actingGiveawayStaffFor($guild);
+
+    Livewire::actingAs($staff)
+        ->test(GiveawayIndex::class, ['guild' => $guild])
+        ->assertSee('Plain Theme')
+        ->assertOk();
+});
+
 it('never lists a giveaway belonging to another guild', function () {
     $guild = Guild::factory()->create();
     $theme = CollectionTheme::factory()->for($guild)->create(['name' => 'Mine']);

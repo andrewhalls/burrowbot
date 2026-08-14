@@ -40,6 +40,7 @@ class CreateStandardGiveawayAction
         ?string $recurrenceRule,
         ?\DateTimeInterface $scheduledPostAt,
         ?string $recurrenceTimezone,
+        ?string $imagePath = null,
     ): StandardGiveaway {
         $prizeCollectionThemeItemIds = array_values(array_unique($prizeCollectionThemeItemIds));
 
@@ -59,11 +60,12 @@ class CreateStandardGiveawayAction
         return DB::transaction(function () use (
             $guild, $title, $description, $channelId, $postingMode, $winnerCount,
             $requiresBooster, $durationMinutes, $prizeCollectionThemeItemIds,
-            $requiredDiscordRoleIds, $recurrenceRule, $scheduledPostAt, $recurrenceTimezone,
+            $requiredDiscordRoleIds, $recurrenceRule, $scheduledPostAt, $recurrenceTimezone, $imagePath,
         ) {
             $giveaway = $guild->standardGiveaways()->create([
                 'title' => $title,
                 'description' => $description,
+                'image_path' => $imagePath,
                 'channel_id' => $channelId,
                 'posting_mode' => $postingMode,
                 'status' => StandardGiveaway::STATUS_ACTIVE,
@@ -87,6 +89,7 @@ class CreateStandardGiveawayAction
                 $giveaway->occurrences()->create([
                     'title' => $giveaway->title,
                     'description' => $giveaway->description,
+                    'image_path' => $giveaway->image_path,
                     'channel_id' => $giveaway->channel_id,
                     'posting_mode' => $giveaway->posting_mode,
                     'requires_booster' => $giveaway->requires_booster,

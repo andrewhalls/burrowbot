@@ -40,6 +40,26 @@ it('creates a pending outbound action when the job runs', function () {
         ->exists())->toBeTrue();
 });
 
+it('includes the description and image url in the outbound action payload when set', function () {
+    $giveaway = Giveaway::factory()->withDescription('A special one')->withImage('giveaway-images/abc.jpg')->create();
+
+    (new StartGiveawayAction)->execute($giveaway);
+
+    $action = DiscordOutboundAction::query()->where('giveaway_id', $giveaway->id)->first();
+    expect($action->payload['description'])->toBe('A special one')
+        ->and($action->payload['image_url'])->toContain('giveaway-images/abc.jpg');
+});
+
+it('omits the description and leaves image_url null when neither is set', function () {
+    $giveaway = Giveaway::factory()->create();
+
+    (new StartGiveawayAction)->execute($giveaway);
+
+    $action = DiscordOutboundAction::query()->where('giveaway_id', $giveaway->id)->first();
+    expect($action->payload['description'])->toBeNull()
+        ->and($action->payload['image_url'])->toBeNull();
+});
+
 it('refuses to start a giveaway that is not a draft', function () {
     $giveaway = Giveaway::factory()->active()->create();
 

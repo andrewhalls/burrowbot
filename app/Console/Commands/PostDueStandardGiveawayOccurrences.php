@@ -48,6 +48,7 @@ class PostDueStandardGiveawayOccurrences extends Command
                         'title' => $occurrence->title,
                         'description' => $occurrence->description,
                         'ends_at' => $postedAt->clone()->addMinutes($occurrence->duration_minutes)->toIso8601String(),
+                        'image_url' => $occurrence->image_url,
                         'requires_booster' => $occurrence->requires_booster,
                         'required_role_ids' => $occurrence->required_role_ids,
                         'prize_item_names' => CollectionThemeItem::query()

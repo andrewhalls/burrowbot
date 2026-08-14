@@ -6,6 +6,7 @@ use App\Actions\StandardGiveaways\UpdateStandardGiveawayAction;
 use App\Actions\StandardGiveaways\UpdateStandardGiveawayStatusAction;
 use App\Models\StandardGiveaway;
 use App\Models\StandardGiveawayOccurrence;
+use Illuminate\Support\Facades\Storage;
 
 it('updates giveaway fields without touching existing occurrences', function () {
     $giveaway = StandardGiveaway::factory()->create(['title' => 'Old Title']);
@@ -18,6 +19,39 @@ it('updates giveaway fields without touching existing occurrences', function () 
 
     expect($giveaway->fresh()->title)->toBe('New Title')
         ->and($occurrence->fresh()->title)->toBe('Old Title');
+});
+
+it('leaves already-generated occurrences\' images unchanged and deletes the orphaned old file when replaced', function () {
+    Storage::fake('public');
+    Storage::disk('public')->put('standard-giveaway-images/old.jpg', 'old-bytes');
+    Storage::disk('public')->put('standard-giveaway-images/new.jpg', 'new-bytes');
+
+    $giveaway = StandardGiveaway::factory()->create(['image_path' => 'standard-giveaway-images/old.jpg']);
+    $occurrence = StandardGiveawayOccurrence::factory()->create([
+        'standard_giveaway_id' => $giveaway->id,
+        'image_path' => 'standard-giveaway-images/old.jpg',
+    ]);
+
+    (new UpdateStandardGiveawayAction)->execute($giveaway, ['image_path' => 'standard-giveaway-images/new.jpg']);
+
+    expect($giveaway->fresh()->image_path)->toBe('standard-giveaway-images/new.jpg')
+        ->and($occurrence->fresh()->image_path)->toBe('standard-giveaway-images/old.jpg');
+
+    // The old file is still referenced by the already-generated occurrence,
+    // so it must survive this edit (design.md Decision 2, revised).
+    Storage::disk('public')->assertExists('standard-giveaway-images/old.jpg');
+});
+
+it('deletes the old image file once no occurrence references it anymore', function () {
+    Storage::fake('public');
+    Storage::disk('public')->put('standard-giveaway-images/old.jpg', 'old-bytes');
+    Storage::disk('public')->put('standard-giveaway-images/new.jpg', 'new-bytes');
+
+    $giveaway = StandardGiveaway::factory()->create(['image_path' => 'standard-giveaway-images/old.jpg']);
+
+    (new UpdateStandardGiveawayAction)->execute($giveaway, ['image_path' => 'standard-giveaway-images/new.jpg']);
+
+    Storage::disk('public')->assertMissing('standard-giveaway-images/old.jpg');
 });
 
 it('transitions giveaway status', function () {

@@ -28,6 +28,8 @@ tags:
     description: Guild lifecycle sync (bot joins/leaves/renames a Discord guild)
   - name: members
     description: Per-guild Discord member directory sync
+  - name: channels
+    description: Per-guild Discord channel directory sync (powers the dashboard's channel picker)
   - name: entries
     description: Giveaway join/entry processing
   - name: recovery
@@ -145,6 +147,62 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
+
+  /guilds/{guildDiscordId}/channels:
+    put:
+      tags: [channels]
+      summary: Replace a guild's synced postable-channel list
+      description: >-
+        Idempotent full-list sync, not a per-event patch: Laravel replaces
+        this guild's entire synced channel set to match exactly what's
+        given (upserts everything present, deletes anything not present).
+        The bot calls this with its current, already-in-sync channel cache
+        on guild join, on any channel create/update/delete event, and on a
+        periodic fallback timer. Only text and announcement-type channels
+        should be sent - the bot filters out voice/category/forum/thread
+        channels before calling this. See
+        `openspec/changes/add-discord-channel-picker/design.md` Decision 1.
+      operationId: syncGuildChannels
+      parameters:
+        - $ref: "#/components/parameters/GuildDiscordId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [channels]
+              properties:
+                channels:
+                  type: array
+                  description: The guild's complete current postable-channel list. An empty array deletes every previously synced channel for this guild.
+                  items:
+                    type: object
+                    required: [discord_channel_id, name]
+                    properties:
+                      discord_channel_id:
+                        type: string
+                      name:
+                        type: string
+      responses:
+        "200":
+          description: Channel list synced
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/DiscordChannel"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          description: Guild not known to Laravel
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "422":
+          $ref: "#/components/responses/ValidationError"
 
   /giveaways/active:
     get:
@@ -487,6 +545,18 @@ components:
         avatar_url:
           type: [string, "null"]
 
+    DiscordChannel:
+      type: object
+      properties:
+        id:
+          type: integer
+        guild_id:
+          type: integer
+        discord_channel_id:
+          type: string
+        name:
+          type: string
+
     ActiveGiveaway:
       type: object
       properties:
@@ -518,6 +588,8 @@ components:
               type: integer
             name:
               type: string
+            image_url:
+              type: [string, "null"]
 
     OutboundAction:
       type: object
@@ -546,15 +618,22 @@ components:
         payload:
           type: object
           description: >-
-            Action-specific data. For post_event_occurrence_thread/message:
+            Action-specific data. For post_giveaway_message: channel_id,
+            collection_theme_name, ends_at, description (the giveaway's own
+            description if set, otherwise omitted so the bot falls back to
+            its default instructional line), and image_url (omitted if the
+            giveaway has no image). For post_event_occurrence_thread/message:
             channel_id, title, description, scheduled_start_at, and a
             `roles` array of { id, name } for the signup controls. For
             post_standard_giveaway_thread/message: occurrence_id,
-            channel_id, title, description, ends_at, requires_booster,
+            channel_id, title, description, ends_at, image_url (omitted if
+            the occurrence has no image), requires_booster,
             required_role_ids, and prize_item_names. For
             announce_standard_giveaway_winners: occurrence_id, channel_id,
             discord_thread_id/discord_message_id to reply in, and a
-            `winners` array of { discord_user_id, username, item_id, item_name }.
+            `winners` array of { discord_user_id, username, item_id,
+            item_name, item_image_url } (item_image_url omitted if that
+            winner's item has no image).
           additionalProperties: true
 
     StandardGiveawayEntryResult:

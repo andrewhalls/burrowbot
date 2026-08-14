@@ -12,17 +12,19 @@ export const JOIN_GIVEAWAY_BUTTON_ID = 'join-giveaway'
  */
 export function createDiscordAdapter(client) {
   return {
-    async postGiveawayMessage({ channel_id: channelId, collection_theme_name: themeName, ends_at: endsAt }) {
+    async postGiveawayMessage({ channel_id: channelId, collection_theme_name: themeName, ends_at: endsAt, description, image_url: imageUrl }) {
       const channel = await client.channels.fetch(channelId)
 
       const embed = new EmbedBuilder()
         .setTitle('🎁 Giveaway!')
-        .setDescription(`Click **Join Giveaway** to enter and instantly find out what you won.`)
+        .setDescription(description || `Click **Join Giveaway** to enter and instantly find out what you won.`)
         .addFields(
           { name: 'Theme', value: themeName, inline: true },
           { name: 'Ends', value: endsAt ? `<t:${Math.floor(new Date(endsAt).getTime() / 1000)}:R>` : 'soon', inline: true },
         )
         .setColor(0x5865f2)
+
+      if (imageUrl) embed.setImage(imageUrl)
 
       const button = new ButtonBuilder()
         .setCustomId(JOIN_GIVEAWAY_BUTTON_ID)
@@ -79,6 +81,27 @@ export function createDiscordAdapter(client) {
 
     async announceStandardGiveawayWinners({ channel_id: channelId, discord_thread_id: discordThreadId, winners }) {
       const channel = await client.channels.fetch(discordThreadId ?? channelId)
+
+      // Discord allows up to 10 embeds per message - one per winner (with
+      // that winner's own item image) is unambiguous when winners received
+      // different items. Falls back to today's single combined embed (no
+      // images) for a zero-winner close or an unusually large winner count
+      // (design.md Decision 2, add-collection-theme-item-images).
+      if (winners.length > 0 && winners.length <= 10) {
+        const embeds = winners.map((winner) => {
+          const embed = new EmbedBuilder()
+            .setTitle(`🎉 ${winner.username} won!`)
+            .setDescription(`**${winner.item_name}**`)
+            .setColor(0x57f287)
+
+          if (winner.item_image_url) embed.setImage(winner.item_image_url)
+
+          return embed
+        })
+
+        await channel.send({ embeds })
+        return
+      }
 
       const embed = new EmbedBuilder()
         .setTitle('🎉 Winners announced!')

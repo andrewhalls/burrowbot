@@ -28,6 +28,24 @@ it('enqueues a post_standard_giveaway_message action and stamps posted_at/ends_a
         ->and($fresh->posted_at->diffInMinutes($fresh->ends_at))->toEqual(120);
 });
 
+it('includes the image url in the outbound action payload when set', function () {
+    $occurrence = StandardGiveawayOccurrence::factory()->withImage('standard-giveaway-images/abc.jpg')->create();
+
+    $this->artisan('standard-giveaways:post-due-occurrences');
+
+    $action = DiscordOutboundAction::query()->where('standard_giveaway_occurrence_id', $occurrence->id)->first();
+    expect($action->payload['image_url'])->toContain('standard-giveaway-images/abc.jpg');
+});
+
+it('leaves image_url null when the occurrence has no image', function () {
+    $occurrence = StandardGiveawayOccurrence::factory()->create();
+
+    $this->artisan('standard-giveaways:post-due-occurrences');
+
+    $action = DiscordOutboundAction::query()->where('standard_giveaway_occurrence_id', $occurrence->id)->first();
+    expect($action->payload['image_url'])->toBeNull();
+});
+
 it('enqueues a post_standard_giveaway_thread action for a thread-mode occurrence', function () {
     $occurrence = StandardGiveawayOccurrence::factory()->create(['posting_mode' => StandardGiveaway::POSTING_MODE_THREAD]);
 

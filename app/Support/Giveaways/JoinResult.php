@@ -39,13 +39,17 @@ final class JoinResult
     }
 
     /**
-     * @return array{status: string, item?: array{id: int, name: string}|null}
+     * @return array{status: string, item?: array{id: int, name: string, image_url: string|null}|null}
      */
     public function toArray(): array
     {
         return [
             'status' => $this->status,
-            'item' => $this->item ? ['id' => $this->item->id, 'name' => $this->item->name] : null,
+            'item' => $this->item ? [
+                'id' => $this->item->id,
+                'name' => $this->item->name,
+                'image_url' => $this->item->image_url,
+            ] : null,
         ];
     }
 }

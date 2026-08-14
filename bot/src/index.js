@@ -4,9 +4,10 @@ import { createLaravelClient } from './laravelClient.js'
 import { createDiscordAdapter, JOIN_GIVEAWAY_BUTTON_ID } from './discordAdapter.js'
 import { EVENT_NOT_ATTENDING_PREFIX, EVENT_ROLE_SELECT_PREFIX } from './eventOccurrenceMessage.js'
 import { STANDARD_GIVEAWAY_ENTER_PREFIX } from './standardGiveawayOccurrenceMessage.js'
+import { postableChannels } from './discordChannels.js'
 import { createMessageRoutingStore } from './messageRoutingStore.js'
 import { startOutboundPoller } from './outboundPoller.js'
-import { joinResultReply } from './joinResultReply.js'
+import { buildJoinInteractionReplyOptions } from './joinInteractionReply.js'
 import { eventSignupResultReply } from './eventSignupResultReply.js'
 import { standardGiveawayEntryResultReply } from './standardGiveawayEntryResultReply.js'
 
@@ -35,6 +36,21 @@ async function upsertObservedMember(guild, user) {
   }
 }
 
+// Sends the guild's *current* full postable-channel list every time -
+// idempotent on the Laravel side (SyncGuildChannelsAction), so this is
+// safe to call from GuildCreate, any single-channel gateway event, and the
+// periodic fallback timer without any of them needing to coordinate with
+// each other. guild.channels.cache is already kept correct in real time by
+// discord.js as gateway events arrive - no extra Discord API call needed.
+async function syncGuildChannels(guild) {
+  try {
+    const channels = postableChannels([...guild.channels.cache.values()])
+    await laravelClient.syncGuildChannels(guild.id, channels)
+  } catch (error) {
+    console.error(`Failed to sync channels for guild ${guild.id}:`, error)
+  }
+}
+
 client.on(Events.GuildCreate, async (guild) => {
   try {
     await laravelClient.guildJoined(guild.id, guild.name)
@@ -42,6 +58,20 @@ client.on(Events.GuildCreate, async (guild) => {
   } catch (error) {
     console.error(`Failed to register guild ${guild.id}:`, error)
   }
+
+  await syncGuildChannels(guild)
+})
+
+client.on(Events.ChannelCreate, async (channel) => {
+  if (channel.guild) await syncGuildChannels(channel.guild)
+})
+
+client.on(Events.ChannelUpdate, async (_oldChannel, newChannel) => {
+  if (newChannel.guild) await syncGuildChannels(newChannel.guild)
+})
+
+client.on(Events.ChannelDelete, async (channel) => {
+  if (channel.guild) await syncGuildChannels(channel.guild)
 })
 
 client.on(Events.GuildDelete, async (guild) => {
@@ -122,7 +152,7 @@ client.on(Events.InteractionCreate, async (interaction) => {
 
     try {
       const result = await laravelClient.joinGiveaway(giveawayId, interaction.user.id, interaction.user.username)
-      await interaction.reply({ content: joinResultReply(result), ephemeral: true })
+      await interaction.reply(buildJoinInteractionReplyOptions(result, interaction.user.id))
     } catch (error) {
       console.error(`Failed to process join for giveaway ${giveawayId}:`, error)
       await interaction.reply({ content: 'Something went wrong - please try again.', ephemeral: true })
@@ -156,6 +186,19 @@ client.once(Events.ClientReady, async (readyClient) => {
 
   const restoredCount = await routingStore.rebuildFromLaravel(laravelClient)
   console.log(`Recovered ${restoredCount} active giveaway(s) from Laravel`)
+
+  // Real-time gateway events (ChannelCreate/Update/Delete) are the primary
+  // channel-sync path - this periodic sweep is only a fallback safety net
+  // for an event missed while briefly disconnected, hence the long
+  // interval (design.md Decision 1: minutes, not seconds).
+  for (const guild of readyClient.guilds.cache.values()) {
+    await syncGuildChannels(guild)
+  }
+  setInterval(() => {
+    for (const guild of readyClient.guilds.cache.values()) {
+      syncGuildChannels(guild)
+    }
+  }, Number(process.env.CHANNEL_RESYNC_INTERVAL_MS ?? 30 * 60 * 1000))
 
   const adapter = createDiscordAdapter(readyClient)
 

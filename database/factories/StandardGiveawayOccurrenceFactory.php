@@ -42,12 +42,18 @@ class StandardGiveawayOccurrenceFactory extends Factory
      * Snapshot scalar/list fields from a real StandardGiveaway, matching
      * what generation actually does.
      */
+    public function withImage(string $path): static
+    {
+        return $this->state(['image_path' => $path]);
+    }
+
     public function fromGiveaway(StandardGiveaway $giveaway): static
     {
         return $this->state([
             'standard_giveaway_id' => $giveaway->id,
             'title' => $giveaway->title,
             'description' => $giveaway->description,
+            'image_path' => $giveaway->image_path,
             'channel_id' => $giveaway->channel_id,
             'posting_mode' => $giveaway->posting_mode,
             'requires_booster' => $giveaway->requires_booster,

@@ -16,7 +16,7 @@ use InvalidArgumentException;
  */
 class ManageCollectionThemeItemsAction
 {
-    public function addItem(CollectionTheme $theme, string $name): CollectionThemeItem
+    public function addItem(CollectionTheme $theme, string $name, ?string $imagePath = null): CollectionThemeItem
     {
         $this->ensureEditable($theme);
 
@@ -28,7 +28,7 @@ class ManageCollectionThemeItemsAction
 
         $nextSortOrder = ((int) $theme->items()->max('sort_order')) + 1;
 
-        return $theme->items()->create(['name' => $name, 'sort_order' => $nextSortOrder]);
+        return $theme->items()->create(['name' => $name, 'image_path' => $imagePath, 'sort_order' => $nextSortOrder]);
     }
 
     public function removeItem(CollectionTheme $theme, CollectionThemeItem $item): void

@@ -49,4 +49,18 @@ describe('buildStandardGiveawayOccurrenceMessage', () => {
     expect(embedData.fields.find((f) => f.name === 'Eligibility').value).toContain('<@&111>')
     expect(embedData.fields.find((f) => f.name === 'Eligibility').value).toContain('<@&222>')
   })
+
+  it('sets the embed image only when image_url is present', () => {
+    const message = buildStandardGiveawayOccurrenceMessage({ ...payload, image_url: 'https://example.test/prize.png' })
+    const embedData = message.embeds[0].data
+
+    expect(embedData.image.url).toBe('https://example.test/prize.png')
+  })
+
+  it('omits the embed image when image_url is absent', () => {
+    const message = buildStandardGiveawayOccurrenceMessage(payload)
+    const embedData = message.embeds[0].data
+
+    expect(embedData.image).toBeUndefined()
+  })
 })

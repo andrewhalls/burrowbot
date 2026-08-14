@@ -18,6 +18,28 @@ it('lists standard giveaways for the guild', function () {
         ->assertSee('Nitro Friday');
 });
 
+it('shows a standard giveaway\'s image when set', function () {
+    $guild = Guild::factory()->create();
+    StandardGiveaway::factory()->for($guild)->withImage('standard-giveaway-images/abc.jpg')->create(['title' => 'Boosted Night']);
+    $staff = actingEventStaffFor($guild);
+
+    Livewire::actingAs($staff)
+        ->test(StandardGiveawayIndex::class, ['guild' => $guild])
+        ->assertSee('Boosted Night')
+        ->assertSee('standard-giveaway-images/abc.jpg');
+});
+
+it('renders cleanly for a standard giveaway with no image', function () {
+    $guild = Guild::factory()->create();
+    StandardGiveaway::factory()->for($guild)->create(['title' => 'Plain Giveaway']);
+    $staff = actingEventStaffFor($guild);
+
+    Livewire::actingAs($staff)
+        ->test(StandardGiveawayIndex::class, ['guild' => $guild])
+        ->assertSee('Plain Giveaway')
+        ->assertOk();
+});
+
 it('changes a standard giveaway status', function () {
     $guild = Guild::factory()->create();
     $giveaway = StandardGiveaway::factory()->for($guild)->create(['status' => StandardGiveaway::STATUS_ACTIVE]);

@@ -23,4 +23,9 @@ class CollectionThemeItemFactory extends Factory
             'sort_order' => 0,
         ];
     }
+
+    public function withImage(string $path): static
+    {
+        return $this->state(['image_path' => $path]);
+    }
 }

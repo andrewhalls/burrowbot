@@ -38,6 +38,11 @@ class StandardGiveawayFactory extends Factory
         return $this->state(['posting_mode' => StandardGiveaway::POSTING_MODE_THREAD]);
     }
 
+    public function withImage(string $path): static
+    {
+        return $this->state(['image_path' => $path]);
+    }
+
     public function boosterOnly(): static
     {
         return $this->state(['requires_booster' => true]);

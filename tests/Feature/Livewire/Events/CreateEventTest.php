@@ -3,12 +3,35 @@
 declare(strict_types=1);
 
 use App\Livewire\Events\CreateEvent;
+use App\Models\DiscordChannel;
 use App\Models\Event;
 use App\Models\EventRoleSet;
 use App\Models\Guild;
 use App\Models\GuildAdmin;
 use App\Models\User;
 use Livewire\Livewire;
+
+it('shows the channel picker scoped to this guild, not another guild\'s channels', function () {
+    $guild = Guild::factory()->create();
+    DiscordChannel::factory()->for($guild)->create(['name' => 'announcements']);
+    $otherGuild = Guild::factory()->create();
+    DiscordChannel::factory()->for($otherGuild)->create(['name' => 'other-guild-general']);
+    $staff = actingEventStaffFor($guild);
+
+    Livewire::actingAs($staff)
+        ->test(CreateEvent::class, ['guild' => $guild])
+        ->assertSee('#announcements')
+        ->assertDontSee('#other-guild-general');
+});
+
+it('shows an empty (not broken) channel picker when the guild has no synced channels', function () {
+    $guild = Guild::factory()->create();
+    $staff = actingEventStaffFor($guild);
+
+    Livewire::actingAs($staff)
+        ->test(CreateEvent::class, ['guild' => $guild])
+        ->assertSee('No synced channels yet.');
+});
 
 it('creates a one-off event', function () {
     $guild = Guild::factory()->create();

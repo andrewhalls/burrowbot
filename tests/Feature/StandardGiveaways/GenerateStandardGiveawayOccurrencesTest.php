@@ -27,6 +27,22 @@ it('generates occurrences for an active weekly recurring giveaway, snapshotting 
         ->and($first->status)->toBe(StandardGiveawayOccurrence::STATUS_SCHEDULED);
 });
 
+it('snapshots the giveaway image into each generated occurrence', function () {
+    $theme = CollectionTheme::factory()->withItems(1)->create();
+    $item = $theme->items->first();
+    $giveaway = StandardGiveaway::factory()->for($theme->guild)->withImage('standard-giveaway-images/abc.jpg')->recurring(
+        'FREQ=WEEKLY;BYDAY=FR',
+        now()->next('Friday')->setTime(18, 0),
+        'UTC',
+    )->create();
+    StandardGiveawayPrizeItem::factory()->for($giveaway, 'standardGiveaway')->create(['collection_theme_item_id' => $item->id]);
+
+    $this->artisan('standard-giveaways:generate-occurrences')->assertSuccessful();
+
+    $first = $giveaway->occurrences()->orderBy('scheduled_post_at')->first();
+    expect($first->image_path)->toBe('standard-giveaway-images/abc.jpg');
+});
+
 it('does not generate duplicate occurrences on a second run', function () {
     $giveaway = StandardGiveaway::factory()->recurring(
         'FREQ=WEEKLY;BYDAY=FR',

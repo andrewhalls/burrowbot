@@ -13,14 +13,19 @@ use Illuminate\Contracts\View\View;
 use Illuminate\Support\Carbon;
 use InvalidArgumentException;
 use Livewire\Component;
+use Livewire\WithFileUploads;
 
 class CreateStandardGiveaway extends Component
 {
+    use WithFileUploads;
+
     public Guild $guild;
 
     public string $title = '';
 
     public string $description = '';
+
+    public mixed $image = null;
 
     public string $channelId = '';
 
@@ -104,6 +109,7 @@ class CreateStandardGiveaway extends Component
         $validated = $this->validate([
             'title' => ['required', 'string', 'max:255'],
             'description' => ['required', 'string'],
+            'image' => ['nullable', 'image', 'max:5120'],
             'channelId' => ['required', 'string'],
             'postingMode' => ['required', 'in:'.StandardGiveaway::POSTING_MODE_THREAD.','.StandardGiveaway::POSTING_MODE_MESSAGE],
             'winnerCount' => ['required', 'integer', 'min:1'],
@@ -146,6 +152,8 @@ class CreateStandardGiveaway extends Component
             ->values()
             ->all();
 
+        $imagePath = $this->image?->store('standard-giveaway-images', 'public');
+
         try {
             $giveaway = $createGiveaway->execute(
                 $this->guild,
@@ -161,6 +169,7 @@ class CreateStandardGiveaway extends Component
                 $recurrenceRule,
                 $startAt,
                 $this->timezone,
+                $imagePath,
             );
         } catch (InvalidArgumentException $e) {
             $this->addError('selectedPrizeItemIds', $e->getMessage());

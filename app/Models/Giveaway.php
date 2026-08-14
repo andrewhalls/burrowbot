@@ -4,11 +4,13 @@ declare(strict_types=1);
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Storage;
 
 class Giveaway extends Model
 {
@@ -27,6 +29,8 @@ class Giveaway extends Model
         'channel_id',
         'duration_minutes',
         'scheduled_start_at',
+        'description',
+        'image_path',
         'status',
         'discord_message_id',
         'starts_at',
@@ -41,6 +45,20 @@ class Giveaway extends Model
             'starts_at' => 'datetime',
             'ends_at' => 'datetime',
         ];
+    }
+
+    /**
+     * The image's fetchable URL, computed on demand from the stored relative
+     * path (design.md Decision 1) - never stored in the DB so the app's
+     * domain can change without a data migration.
+     *
+     * @return Attribute<string|null, never>
+     */
+    protected function imageUrl(): Attribute
+    {
+        return Attribute::make(
+            get: fn () => $this->image_path ? Storage::disk('public')->url($this->image_path) : null,
+        );
     }
 
     /**

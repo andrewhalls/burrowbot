@@ -31,6 +31,8 @@ class PostGiveawayMessage implements ShouldQueue
                 'channel_id' => $this->giveaway->channel_id,
                 'collection_theme_name' => $this->giveaway->collectionTheme->name,
                 'ends_at' => $this->giveaway->ends_at?->toIso8601String(),
+                'description' => $this->giveaway->description,
+                'image_url' => $this->giveaway->image_url,
             ],
             'status' => DiscordOutboundAction::STATUS_PENDING,
         ]);

@@ -7,11 +7,19 @@ Defines the contract and behavior of the persistent Discord gateway bot process 
 ## Requirements
 
 ### Requirement: Posting a giveaway message
-The system SHALL, on request from Laravel, post a giveaway message to the specified Discord channel containing the collection theme name, duration/closing time, and a "Join Giveaway" interactive button, and SHALL report the resulting Discord message ID back to Laravel.
+The system SHALL, on request from Laravel, post a giveaway message to the specified Discord channel containing the collection theme name, duration/closing time, a description (the giveaway's own description if set, otherwise a default instructional line), the giveaway's image (if set), and a "Join Giveaway" interactive button, and SHALL report the resulting Discord message ID back to Laravel.
 
 #### Scenario: Giveaway start triggers a post
 - **WHEN** Laravel requests a giveaway be posted for a channel
 - **THEN** the bot posts the message with a working "Join Giveaway" button and reports the Discord message ID so Laravel can edit it later
+
+#### Scenario: Custom description shown when set
+- **WHEN** Laravel requests a giveaway with a description be posted
+- **THEN** the bot's post shows that description instead of the default instructional line
+
+#### Scenario: Image shown when set
+- **WHEN** Laravel requests a giveaway with an image be posted
+- **THEN** the bot's post includes that image
 
 ### Requirement: Relaying join interactions
 The system SHALL, on receiving a "Join Giveaway" button interaction, call Laravel's internal API to process the join and relay Laravel's result back to Discord as a response to that interaction.
@@ -64,7 +72,7 @@ The system SHALL, on receiving a role-selection or Not-Attending interaction on 
 - **THEN** the bot calls Laravel's internal signup endpoint marking that member Not Attending and replies to the Discord interaction with the outcome Laravel returned
 
 ### Requirement: Posting a standard giveaway occurrence
-The system SHALL, on request from Laravel, post a standard giveaway occurrence to the specified Discord channel as either a new thread or a new plain message (per the giveaway's posting mode), containing the prize item(s), the eligibility restriction (if any), the end time, and an "Enter" control, and SHALL report the resulting Discord thread or message ID back to Laravel.
+The system SHALL, on request from Laravel, post a standard giveaway occurrence to the specified Discord channel as either a new thread or a new plain message (per the giveaway's posting mode), containing the prize item(s), the eligibility restriction (if any), the end time, the giveaway's image (if set), and an "Enter" control, and SHALL report the resulting Discord thread or message ID back to Laravel.
 
 #### Scenario: Occurrence posted as a thread
 - **WHEN** Laravel requests a thread-mode standard giveaway occurrence be posted
@@ -74,6 +82,10 @@ The system SHALL, on request from Laravel, post a standard giveaway occurrence t
 - **WHEN** Laravel requests a message-mode standard giveaway occurrence be posted
 - **THEN** the bot posts a new plain Discord message in the configured channel with an "Enter" control and reports the message ID so Laravel can associate it with the occurrence
 
+#### Scenario: Image shown when set
+- **WHEN** Laravel requests a standard giveaway occurrence with an image be posted
+- **THEN** the bot's post includes that image
+
 ### Requirement: Relaying standard giveaway entry interactions with eligibility data
 The system SHALL, on receiving an "Enter" interaction, call Laravel's internal API with the member's Discord ID and their current Discord roles and boost status as reported by that interaction, and relay Laravel's result back to Discord as a response to that interaction.
 
@@ -82,8 +94,12 @@ The system SHALL, on receiving an "Enter" interaction, call Laravel's internal A
 - **THEN** the bot calls Laravel's internal entry endpoint with the occurrence ID, the member's Discord ID, the member's current role IDs, and whether they are currently boosting, and replies to the Discord interaction with the outcome Laravel returned
 
 ### Requirement: Announcing drawn winners
-The system SHALL, on request from Laravel after an occurrence closes, update or reply to that occurrence's Discord message/thread announcing the drawn winners and, when more than one prize item was configured, which item each winner received.
+The system SHALL, on request from Laravel after an occurrence closes, update or reply to that occurrence's Discord message/thread announcing the drawn winners and, when more than one prize item was configured, which item each winner received, including each won item's image when it has one.
 
 #### Scenario: Winners announced after a draw
 - **WHEN** Laravel requests winners be announced for a closed occurrence
 - **THEN** the bot posts the winner announcement in the occurrence's original channel/thread, naming each winner and their assigned item
+
+#### Scenario: Winner's item has an image
+- **WHEN** a winner's assigned item has an image
+- **THEN** the winner announcement includes that image alongside that winner's name and item

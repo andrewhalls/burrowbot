@@ -55,6 +55,7 @@ class GenerateStandardGiveawayOccurrences extends Command
                     [
                         'title' => $giveaway->title,
                         'description' => $giveaway->description,
+                        'image_path' => $giveaway->image_path,
                         'channel_id' => $giveaway->channel_id,
                         'posting_mode' => $giveaway->posting_mode,
                         'requires_booster' => $giveaway->requires_booster,

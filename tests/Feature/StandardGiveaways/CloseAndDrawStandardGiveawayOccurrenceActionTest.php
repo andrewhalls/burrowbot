@@ -100,6 +100,44 @@ it('enqueues an announce-winners outbound action naming each winner and their it
         ->and($action->payload['winners'][0]['item_name'])->toBe($item->name);
 });
 
+it('includes the won item\'s image url in the outbound payload when it has one', function () {
+    $theme = CollectionTheme::factory()->withItems(0)->create();
+    $item = $theme->items()->create(['name' => 'Golden Ticket', 'image_path' => 'theme-item-images/abc.jpg', 'sort_order' => 0]);
+    $occurrence = StandardGiveawayOccurrence::factory()->ended()->create([
+        'winner_count' => 1,
+        'prize_item_ids' => [$item->id],
+    ]);
+    StandardGiveawayEntry::factory()->for($occurrence, 'standardGiveawayOccurrence')->create();
+
+    closeAndDrawAction()->execute($occurrence);
+
+    $action = DiscordOutboundAction::query()
+        ->where('standard_giveaway_occurrence_id', $occurrence->id)
+        ->where('type', DiscordOutboundAction::TYPE_ANNOUNCE_STANDARD_GIVEAWAY_WINNERS)
+        ->first();
+
+    expect($action->payload['winners'][0]['item_image_url'])->toContain('theme-item-images/abc.jpg');
+});
+
+it('leaves item_image_url null when the won item has no image', function () {
+    $theme = CollectionTheme::factory()->withItems(1)->create();
+    $item = $theme->items->first();
+    $occurrence = StandardGiveawayOccurrence::factory()->ended()->create([
+        'winner_count' => 1,
+        'prize_item_ids' => [$item->id],
+    ]);
+    StandardGiveawayEntry::factory()->for($occurrence, 'standardGiveawayOccurrence')->create();
+
+    closeAndDrawAction()->execute($occurrence);
+
+    $action = DiscordOutboundAction::query()
+        ->where('standard_giveaway_occurrence_id', $occurrence->id)
+        ->where('type', DiscordOutboundAction::TYPE_ANNOUNCE_STANDARD_GIVEAWAY_WINNERS)
+        ->first();
+
+    expect($action->payload['winners'][0]['item_image_url'])->toBeNull();
+});
+
 it('is idempotent - running twice does not double-draw', function () {
     $occurrence = StandardGiveawayOccurrence::factory()->ended()->create(['winner_count' => 1]);
     StandardGiveawayEntry::factory()->for($occurrence, 'standardGiveawayOccurrence')->create();

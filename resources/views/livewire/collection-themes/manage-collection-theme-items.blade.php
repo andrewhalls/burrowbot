@@ -8,7 +8,10 @@
 
     <ul class="flex flex-wrap gap-2 mb-3">
         @foreach ($items as $item)
-            <li class="inline-flex items-center gap-1 rounded-full bg-surface-hover px-3 py-1 text-xs">
+            <li class="inline-flex items-center gap-2 rounded-full bg-surface-hover px-3 py-1 text-xs">
+                @if ($item->image_url)
+                    <img src="{{ $item->image_url }}" alt="" class="h-5 w-5 rounded-full object-cover">
+                @endif
                 {{ $item->name }}
                 @if ($editable)
                     <button type="button" wire:click="removeItem({{ $item->id }})" wire:confirm="Remove this item?" class="text-muted hover:text-danger">&times;</button>
@@ -18,11 +21,14 @@
     </ul>
 
     @if ($editable)
-        <div class="flex gap-2">
+        <div class="flex gap-2 items-start">
             <input type="text" wire:model="newItemName" placeholder="New item"
+                   class="flex-1 rounded-control bg-surface border border-line px-3 py-1.5 text-sm">
+            <input type="file" wire:model="newItemImage" accept="image/*"
                    class="flex-1 rounded-control bg-surface border border-line px-3 py-1.5 text-sm">
             <button type="button" wire:click="addItem" class="rounded-control bg-surface-hover hover:bg-surface-hover px-3 py-1.5 text-sm">Add</button>
         </div>
         @error('newItemName') <p class="text-danger text-xs mt-1">{{ $message }}</p> @enderror
+        @error('newItemImage') <p class="text-danger text-xs mt-1">{{ $message }}</p> @enderror
     @endif
 </div>

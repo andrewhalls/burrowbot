@@ -44,6 +44,14 @@ class Guild extends Model
     }
 
     /**
+     * @return HasMany<DiscordChannel, $this>
+     */
+    public function channels(): HasMany
+    {
+        return $this->hasMany(DiscordChannel::class);
+    }
+
+    /**
      * @return HasMany<CollectionTheme, $this>
      */
     public function collectionThemes(): HasMany

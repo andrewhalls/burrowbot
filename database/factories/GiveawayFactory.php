@@ -50,6 +50,16 @@ class GiveawayFactory extends Factory
         return $this->state(['scheduled_start_at' => $when]);
     }
 
+    public function withDescription(string $text): static
+    {
+        return $this->state(['description' => $text]);
+    }
+
+    public function withImage(string $path): static
+    {
+        return $this->state(['image_path' => $path]);
+    }
+
     public function closed(): static
     {
         return $this->state(function (array $attributes) {

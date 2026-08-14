@@ -17,6 +17,7 @@ export function buildStandardGiveawayOccurrenceMessage({
   title,
   description,
   ends_at: endsAt,
+  image_url: imageUrl,
   requires_booster: requiresBooster,
   required_role_ids: requiredRoleIds,
   prize_item_names: prizeItemNames,
@@ -36,6 +37,8 @@ export function buildStandardGiveawayOccurrenceMessage({
       ...(restrictions.length > 0 ? [{ name: 'Eligibility', value: restrictions.join('\n') }] : []),
     )
     .setColor(0x5865f2)
+
+  if (imageUrl) embed.setImage(imageUrl)
 
   const enterButton = new ButtonBuilder()
     .setCustomId(`${STANDARD_GIVEAWAY_ENTER_PREFIX}${occurrenceId}`)

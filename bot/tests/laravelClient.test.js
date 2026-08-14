@@ -48,6 +48,18 @@ describe('createLaravelClient', () => {
     expect(fetchImpl.mock.calls[0][0]).toBe('http://laravel.test/internal/outbound-actions?since=42')
   })
 
+  it('PUTs the full channel list when syncing guild channels', async () => {
+    const fetchImpl = fakeFetch([])
+    const client = createLaravelClient({ baseUrl: 'http://laravel.test', serviceToken: 't', fetchImpl })
+
+    await client.syncGuildChannels('999', [{ discord_channel_id: '1', name: 'general' }])
+
+    const [url, options] = fetchImpl.mock.calls[0]
+    expect(url).toBe('http://laravel.test/internal/guilds/999/channels')
+    expect(options.method).toBe('PUT')
+    expect(JSON.parse(options.body)).toEqual({ channels: [{ discord_channel_id: '1', name: 'general' }] })
+  })
+
   it('posts eligibility data when submitting a standard giveaway entry', async () => {
     const fetchImpl = fakeFetch({ status: 'entered' })
     const client = createLaravelClient({ baseUrl: 'http://laravel.test', serviceToken: 't', fetchImpl })

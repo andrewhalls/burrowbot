@@ -4,11 +4,13 @@ declare(strict_types=1);
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Storage;
 
 class StandardGiveawayOccurrence extends Model
 {
@@ -25,6 +27,7 @@ class StandardGiveawayOccurrence extends Model
         'standard_giveaway_id',
         'title',
         'description',
+        'image_path',
         'channel_id',
         'posting_mode',
         'requires_booster',
@@ -52,6 +55,16 @@ class StandardGiveawayOccurrence extends Model
             'posted_at' => 'datetime',
             'ends_at' => 'datetime',
         ];
+    }
+
+    /**
+     * @return Attribute<string|null, never>
+     */
+    protected function imageUrl(): Attribute
+    {
+        return Attribute::make(
+            get: fn () => $this->image_path ? Storage::disk('public')->url($this->image_path) : null,
+        );
     }
 
     /**

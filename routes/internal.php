@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Internal\ChannelController;
 use App\Http\Controllers\Internal\EventSignupController;
 use App\Http\Controllers\Internal\GiveawayEntryController;
 use App\Http\Controllers\Internal\GiveawayRecoveryController;
@@ -24,6 +25,8 @@ Route::post('/guilds', [GuildController::class, 'store']);
 Route::patch('/guilds/{guild:discord_guild_id}', [GuildController::class, 'update']);
 
 Route::put('/guilds/{guild:discord_guild_id}/members/{discordUserId}', [MemberController::class, 'upsert']);
+
+Route::put('/guilds/{guild:discord_guild_id}/channels', [ChannelController::class, 'sync']);
 
 Route::post('/giveaways/{giveaway}/entries', [GiveawayEntryController::class, 'store']);
 Route::get('/giveaways/active', [GiveawayRecoveryController::class, 'activeGiveaways']);

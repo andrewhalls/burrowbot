@@ -49,7 +49,7 @@ class CloseAndDrawStandardGiveawayOccurrenceAction
             $drawnEntryIds = ($this->drawRandomWinners)($entries->pluck('id')->all(), $locked->winner_count);
 
             $allItemIds = $locked->prize_item_ids;
-            $itemNames = CollectionThemeItem::query()->whereIn('id', $allItemIds)->pluck('name', 'id');
+            $items = CollectionThemeItem::query()->whereIn('id', $allItemIds)->get()->keyBy('id');
             $wonItemIds = [];
             $drawnAt = now();
             $announcedWinners = [];
@@ -73,7 +73,8 @@ class CloseAndDrawStandardGiveawayOccurrenceAction
                     'discord_user_id' => $member->discord_user_id,
                     'username' => $member->username,
                     'item_id' => $itemId,
-                    'item_name' => $itemNames[$itemId] ?? null,
+                    'item_name' => $items->get($itemId)?->name,
+                    'item_image_url' => $items->get($itemId)?->image_url,
                 ];
             }
 

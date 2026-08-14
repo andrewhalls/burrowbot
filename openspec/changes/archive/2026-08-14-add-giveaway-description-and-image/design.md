@@ -24,8 +24,10 @@ See proposal.md - Why. Relevant existing pieces this design builds on:
 
 **Alternative considered**: store the full public URL directly in the DB. Rejected - ties stored data to today's `APP_URL`; the relative-path-plus-accessor approach is standard Laravel practice and costs nothing extra.
 
-### Decision 2: Replacing or clearing an image deletes the old file from disk
-When a new image is uploaded to replace an existing one (Standard Giveaway edit), or when saving with the old image cleared, the previous file at the old `image_path` is deleted via `Storage::disk('public')->delete()` before/after the new path is saved. Popup Giveaway has no edit path (proposal.md - Non-goals), so this only matters for Standard Giveaway's existing edit action.
+### Decision 2: Replacing or clearing an image deletes the old file from disk - but only once no occurrence still references it
+When a new image is uploaded to replace an existing one (Standard Giveaway edit), or when saving with the old image cleared, the previous file at the old `image_path` is deleted via `Storage::disk('public')->delete()`. Popup Giveaway has no edit path (proposal.md - Non-goals), so this only matters for Standard Giveaway's existing edit action.
+
+**Revised during implementation**: `standard_giveaway_occurrences` snapshot the series' `image_path` *string*, not an independent copy of the file - an already-generated occurrence and its parent series can point at the exact same physical file. Deleting the old file unconditionally on every edit would silently break "occurrences generated before the change keep their original image" the first time a series image is ever replaced. `UpdateStandardGiveawayAction` therefore checks `StandardGiveawayOccurrence::where('image_path', $oldPath)->exists()` before deleting - the file is only removed once it's truly orphaned (no occurrence still uses it), otherwise it's left in place and only becomes deletable on some future edit after those occurrences are gone.
 
 **Alternative considered**: leave orphaned files on disk indefinitely. Rejected - trivial to avoid, and unbounded accumulation of unreferenced image files is exactly the kind of thing that quietly becomes a real disk-usage problem on a single-server deploy.
 

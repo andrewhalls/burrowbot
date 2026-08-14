@@ -18,9 +18,37 @@ it('processes a join request and returns the won item', function () {
 
     $response->assertStatus(200)
         ->assertJsonPath('status', 'won')
-        ->assertJsonStructure(['status', 'item' => ['id', 'name']]);
+        ->assertJsonStructure(['status', 'item' => ['id', 'name', 'image_url']]);
 
     expect(GiveawayEntry::query()->count())->toBe(1);
+});
+
+it('includes the assigned item\'s image url when it has one', function () {
+    $theme = CollectionTheme::factory()->withItems(0)->create();
+    $theme->items()->create(['name' => 'Golden Ticket', 'image_path' => 'theme-item-images/abc.jpg', 'sort_order' => 0]);
+    $giveaway = Giveaway::factory()->for($theme, 'collectionTheme')->active()->create();
+
+    $response = $this->withHeaders(botAuthHeader())
+        ->postJson("/internal/giveaways/{$giveaway->id}/entries", [
+            'discord_user_id' => '777',
+            'discord_username' => 'entrant',
+        ]);
+
+    $response->assertStatus(200)
+        ->assertJsonPath('item.image_url', fn ($url) => str_contains($url, 'theme-item-images/abc.jpg'));
+});
+
+it('leaves the assigned item\'s image url null when it has none', function () {
+    $theme = CollectionTheme::factory()->withItems(1)->create();
+    $giveaway = Giveaway::factory()->for($theme, 'collectionTheme')->active()->create();
+
+    $response = $this->withHeaders(botAuthHeader())
+        ->postJson("/internal/giveaways/{$giveaway->id}/entries", [
+            'discord_user_id' => '777',
+            'discord_username' => 'entrant',
+        ]);
+
+    $response->assertStatus(200)->assertJsonPath('item.image_url', null);
 });
 
 it('returns expired for a giveaway past its end time', function () {

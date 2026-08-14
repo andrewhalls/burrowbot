@@ -11,12 +11,17 @@
         @error('description') <p class="text-danger text-xs mt-1">{{ $message }}</p> @enderror
     </div>
 
+    <div>
+        <label class="block text-sm text-muted mb-1">Image (optional)</label>
+        <input type="file" wire:model="image" accept="image/*" class="w-full rounded-control bg-surface border border-line px-3 py-2 text-sm">
+        @error('image') <p class="text-danger text-xs mt-1">{{ $message }}</p> @enderror
+        @if ($image && $image->isPreviewable())
+            <img src="{{ $image->temporaryUrl() }}" alt="Preview" class="mt-2 h-24 rounded-control object-cover">
+        @endif
+    </div>
+
     <div class="grid grid-cols-2 gap-3">
-        <div>
-            <label class="block text-sm text-muted mb-1">Discord channel ID</label>
-            <input type="text" wire:model="channelId" class="w-full rounded-control bg-surface border border-line px-3 py-2 text-sm">
-            @error('channelId') <p class="text-danger text-xs mt-1">{{ $message }}</p> @enderror
-        </div>
+        <x-channel-picker :guild="$guild" model="channelId" :value="$channelId" />
         <div>
             <label class="block text-sm text-muted mb-1">Posting mode</label>
             <select wire:model="postingMode" class="w-full rounded-control bg-surface border border-line px-3 py-2 text-sm">

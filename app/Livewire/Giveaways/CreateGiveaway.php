@@ -10,9 +10,12 @@ use App\Models\Guild;
 use Illuminate\Contracts\View\View;
 use Illuminate\Support\Carbon;
 use Livewire\Component;
+use Livewire\WithFileUploads;
 
 class CreateGiveaway extends Component
 {
+    use WithFileUploads;
+
     public Guild $guild;
 
     public string $channelId = '';
@@ -24,6 +27,10 @@ class CreateGiveaway extends Component
     public string $scheduledStartDate = '';
 
     public string $scheduledStartTime = '';
+
+    public string $description = '';
+
+    public mixed $image = null;
 
     public function mount(Guild $guild): void
     {
@@ -47,6 +54,8 @@ class CreateGiveaway extends Component
             'durationMinutes' => ['required', 'integer', 'min:1'],
             'scheduledStartDate' => ['nullable', 'required_with:scheduledStartTime', 'date'],
             'scheduledStartTime' => ['nullable', 'required_with:scheduledStartDate', 'date_format:H:i'],
+            'description' => ['nullable', 'string'],
+            'image' => ['nullable', 'image', 'max:5120'],
         ]);
 
         $theme = CollectionTheme::query()->findOrFail($validated['collectionThemeId']);
@@ -62,17 +71,21 @@ class CreateGiveaway extends Component
             }
         }
 
+        $imagePath = $this->image?->store('giveaway-images', 'public');
+
         $giveaway = $createGiveaway->execute(
             $this->guild,
             $theme,
             $validated['channelId'],
             $validated['durationMinutes'],
             $scheduledStartAt,
+            $validated['description'] !== '' ? $validated['description'] : null,
+            $imagePath,
         );
 
         $this->dispatch('giveaway-created', giveawayId: $giveaway->id);
 
-        $this->reset(['collectionThemeId', 'durationMinutes', 'scheduledStartDate', 'scheduledStartTime']);
+        $this->reset(['collectionThemeId', 'durationMinutes', 'scheduledStartDate', 'scheduledStartTime', 'description', 'image']);
     }
 
     public function render(): View

@@ -14,6 +14,9 @@
         @forelse ($giveaways as $giveaway)
             <li class="p-4 flex items-center justify-between">
                 <div class="flex items-center gap-3">
+                    @if ($giveaway->image_url)
+                        <img src="{{ $giveaway->image_url }}" alt="" class="h-12 w-12 rounded-control object-cover shrink-0">
+                    @endif
                     <div>
                         <p class="font-medium text-ink">{{ $giveaway->collectionTheme->name }} giveaway</p>
                         <p class="text-xs text-muted">
@@ -23,6 +26,9 @@
                                 &middot; Scheduled for {{ $giveaway->scheduled_start_at->format('M j, g:ia') }}
                             @endif
                         </p>
+                        @if ($giveaway->description)
+                            <p class="text-xs text-muted mt-1">{{ $giveaway->description }}</p>
+                        @endif
                     </div>
                     <span @class([
                         'rounded-pill px-2.5 py-1 text-xs font-medium',
