@@ -45,16 +45,48 @@ it('shows the event summary in the detail panel when a tile is selected', functi
         ->assertSee('Weekly raid');
 });
 
-it('links the summary through to an occurrence\'s existing roster page', function () {
+it('shows an occurrence\'s roster inline in the panel when selected from the summary', function () {
     $guild = Guild::factory()->create();
-    $event = Event::factory()->for($guild)->create();
+    $event = Event::factory()->for($guild)->create(['title' => 'Raid Night']);
     $occurrence = EventOccurrence::factory()->fromEvent($event)->create();
     $staff = actingEventStaffFor($guild);
 
     Livewire::actingAs($staff)
         ->test(EventIndex::class, ['guild' => $guild])
         ->call('select', $event->id)
-        ->assertSee(route('guilds.event-occurrences.show', [$guild, $occurrence]), false);
+        ->assertDontSeeLivewire('events.occurrence-roster')
+        ->call('selectOccurrence', $occurrence->id)
+        ->assertSeeLivewire('events.occurrence-roster')
+        ->assertSee('Not attending')
+        ->assertSee('Back to Raid Night');
+});
+
+it('returns to the event summary when backing out of a roster', function () {
+    $guild = Guild::factory()->create();
+    $event = Event::factory()->for($guild)->create(['description' => 'Weekly raid']);
+    $occurrence = EventOccurrence::factory()->fromEvent($event)->create();
+    $staff = actingEventStaffFor($guild);
+
+    Livewire::actingAs($staff)
+        ->test(EventIndex::class, ['guild' => $guild])
+        ->call('select', $event->id)
+        ->call('selectOccurrence', $occurrence->id)
+        ->call('deselectOccurrence')
+        ->assertSee('Weekly raid');
+});
+
+it('refuses to select an occurrence belonging to a different event', function () {
+    $guild = Guild::factory()->create();
+    $event = Event::factory()->for($guild)->create();
+    $otherEvent = Event::factory()->for($guild)->create();
+    $occurrence = EventOccurrence::factory()->fromEvent($otherEvent)->create();
+    $staff = actingEventStaffFor($guild);
+
+    Livewire::actingAs($staff)
+        ->test(EventIndex::class, ['guild' => $guild])
+        ->call('select', $event->id)
+        ->call('selectOccurrence', $occurrence->id)
+        ->assertDontSeeLivewire('events.occurrence-roster');
 });
 
 it('returns to the list-only view on deselect', function () {

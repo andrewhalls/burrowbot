@@ -6,6 +6,7 @@ namespace App\Livewire\Events;
 
 use App\Actions\Events\UpdateEventStatusAction;
 use App\Models\Event;
+use App\Models\EventOccurrence;
 use App\Models\Guild;
 use Illuminate\Contracts\View\View;
 use Livewire\Attributes\On;
@@ -18,6 +19,13 @@ class EventIndex extends Component
     public bool $showCreateForm = false;
 
     public ?int $selectedId = null;
+
+    /**
+     * Which occurrence's roster to show inside the currently-selected
+     * event's detail panel - nested one level deeper than $selectedId,
+     * cleared whenever the event selection itself changes.
+     */
+    public ?int $selectedOccurrenceId = null;
 
     public function mount(Guild $guild): void
     {
@@ -46,11 +54,25 @@ class EventIndex extends Component
         $exists = Event::query()->where('guild_id', $this->guild->id)->where('id', $eventId)->exists();
 
         $this->selectedId = $exists ? $eventId : null;
+        $this->selectedOccurrenceId = null;
     }
 
     public function deselect(): void
     {
         $this->selectedId = null;
+        $this->selectedOccurrenceId = null;
+    }
+
+    public function selectOccurrence(int $occurrenceId): void
+    {
+        $exists = EventOccurrence::query()->where('event_id', $this->selectedId)->where('id', $occurrenceId)->exists();
+
+        $this->selectedOccurrenceId = $exists ? $occurrenceId : null;
+    }
+
+    public function deselectOccurrence(): void
+    {
+        $this->selectedOccurrenceId = null;
     }
 
     public function render(): View
@@ -66,9 +88,14 @@ class EventIndex extends Component
                 ->find($this->selectedId)
             : null;
 
+        $selectedOccurrence = $this->selectedOccurrenceId
+            ? EventOccurrence::query()->with('event')->find($this->selectedOccurrenceId)
+            : null;
+
         return view('livewire.events.event-index', [
             'events' => $events,
             'selectedEvent' => $selectedEvent,
+            'selectedOccurrence' => $selectedOccurrence,
         ]);
     }
 }

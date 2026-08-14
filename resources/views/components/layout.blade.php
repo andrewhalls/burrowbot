@@ -47,7 +47,7 @@
             <div class="flex-1 flex flex-col min-w-0">
                 <x-dashboard-topbar :guild="$currentGuild" :administered-guilds="$administeredGuilds" />
 
-                <main class="flex-1 overflow-y-auto">
+                <main class="flex-1 overflow-y-auto p-6">
                     {{ $slot }}
                 </main>
             </div>

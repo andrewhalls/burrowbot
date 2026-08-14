@@ -12,19 +12,27 @@
 
     <x-list-detail-shell :selected="$selectedTheme !== null">
         <x-slot:list>
-            <div class="space-y-3">
+            <div class="grid grid-cols-2 gap-3">
                 @forelse ($themes as $theme)
                     <div wire:key="theme-tile-{{ $theme->id }}" wire:click="select({{ $theme->id }})"
                          @class([
-                            'rounded-card border p-4 cursor-pointer hover:bg-surface-hover transition-colors',
+                            'rounded-card border p-3 cursor-pointer hover:bg-surface-hover transition-colors flex flex-col items-center text-center gap-1',
                             'border-accent' => $selectedTheme?->id === $theme->id,
                             'border-line' => $selectedTheme?->id !== $theme->id,
                          ])>
-                        <p class="font-medium text-ink truncate">{{ $theme->name }}</p>
+                        <span class="flex h-10 w-10 items-center justify-center rounded-control bg-accent/10 text-accent">
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="h-5 w-5">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M9.568 3H5.25A2.25 2.25 0 003 5.25v4.318c0 .597.237 1.17.659 1.591l9.581 9.581c.699.699 1.78.872 2.607.33a18.095 18.095 0 005.223-5.223c.542-.827.369-1.908-.33-2.607L11.16 3.66A2.25 2.25 0 009.568 3z" />
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M6 6h.008v.008H6V6z" />
+                            </svg>
+                        </span>
+                        <p class="font-medium text-ink text-sm truncate w-full">{{ $theme->name }}</p>
                         <p class="text-xs text-muted">{{ $theme->items_count }} {{ Str::plural('item', $theme->items_count) }}</p>
                     </div>
                 @empty
-                    <x-list-detail-empty message="No themed collections yet." />
+                    <div class="col-span-2">
+                        <x-list-detail-empty message="No themed collections yet." />
+                    </div>
                 @endforelse
             </div>
         </x-slot:list>

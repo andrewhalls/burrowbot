@@ -12,30 +12,26 @@
 
     <x-list-detail-shell :selected="$selectedEvent !== null">
         <x-slot:list>
-            <div class="space-y-3">
+            <div class="grid grid-cols-2 gap-3">
                 @forelse ($events as $event)
                     <div wire:key="event-tile-{{ $event->id }}" wire:click="select({{ $event->id }})"
                          @class([
-                            'rounded-card border p-4 cursor-pointer hover:bg-surface-hover transition-colors',
+                            'rounded-card border p-3 cursor-pointer hover:bg-surface-hover transition-colors flex flex-col',
                             'border-accent' => $selectedEvent?->id === $event->id,
                             'border-line' => $selectedEvent?->id !== $event->id,
                          ])>
-                        <div class="flex items-center gap-3">
-                            <div class="min-w-0 flex-1">
-                                <p class="font-medium text-ink truncate">{{ $event->title }}</p>
-                                <p class="text-xs text-muted">
-                                    {{ $event->eventRoleSet->name }} &middot;
-                                    {{ $event->isRecurring() ? 'Recurring' : 'One-off' }}
-                                </p>
-                            </div>
-                            <span @class([
-                                'rounded-pill px-2.5 py-1 text-xs font-medium shrink-0',
-                                'bg-success/15 text-success' => $event->status === 'active',
-                                'bg-warning/15 text-warning' => $event->status === 'paused',
-                                'bg-danger/15 text-danger' => $event->status === 'cancelled',
-                            ])>{{ ucfirst($event->status) }}</span>
-                        </div>
-                        <div class="mt-3 pt-3 border-t border-line flex gap-2 text-xs">
+                        <p class="font-medium text-ink text-sm truncate">{{ $event->title }}</p>
+                        <span @class([
+                            'rounded-pill px-2 py-0.5 text-[11px] font-medium shrink-0 self-start mt-1',
+                            'bg-success/15 text-success' => $event->status === 'active',
+                            'bg-warning/15 text-warning' => $event->status === 'paused',
+                            'bg-danger/15 text-danger' => $event->status === 'cancelled',
+                        ])>{{ ucfirst($event->status) }}</span>
+                        <p class="text-xs text-muted mt-2">
+                            {{ $event->eventRoleSet->name }} &middot;
+                            {{ $event->isRecurring() ? 'Recurring' : 'One-off' }}
+                        </p>
+                        <div class="mt-auto pt-2 flex gap-2 text-xs flex-wrap">
                             @if ($event->status !== 'active')
                                 <button type="button" wire:click.stop="setStatus({{ $event->id }}, 'active')" class="text-success hover:text-success">Activate</button>
                             @endif
@@ -48,13 +44,20 @@
                         </div>
                     </div>
                 @empty
-                    <x-list-detail-empty message="No events yet." />
+                    <div class="col-span-2">
+                        <x-list-detail-empty message="No events yet." />
+                    </div>
                 @endforelse
             </div>
         </x-slot:list>
 
         <x-slot:detail>
-            @if ($selectedEvent)
+            @if ($selectedOccurrence)
+                <div>
+                    <button type="button" wire:click="deselectOccurrence" class="mb-3 text-sm text-muted hover:text-ink">&larr; Back to {{ $selectedEvent->title }}</button>
+                    <livewire:events.occurrence-roster :occurrence="$selectedOccurrence" :key="'occurrence-roster-'.$selectedOccurrence->id" />
+                </div>
+            @elseif ($selectedEvent)
                 @include('livewire.events.partials.event-summary', ['event' => $selectedEvent])
             @endif
         </x-slot:detail>

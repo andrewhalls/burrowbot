@@ -10,7 +10,7 @@
     block) - a single render sidesteps any risk of duplicate wire:key
     values within one Livewire component's DOM tree.
 --}}
-<div class="grid lg:grid-cols-[380px_1fr] lg:gap-6 lg:items-start">
+<div class="grid lg:grid-cols-[480px_1fr] lg:gap-6 lg:items-start">
     <div @class(['hidden lg:block' => $selected])>
         {{ $list }}
     </div>

@@ -39,7 +39,7 @@
                         <x-local-time :at="$occurrence->scheduled_start_at" />
                         <span class="text-muted">&middot; {{ ucfirst($occurrence->status) }}</span>
                     </span>
-                    <a href="{{ route('guilds.event-occurrences.show', [$event->guild, $occurrence]) }}" class="text-accent hover:text-accent text-xs">View roster</a>
+                    <button type="button" wire:click="selectOccurrence({{ $occurrence->id }})" class="text-accent hover:text-accent text-xs">View roster</button>
                 </li>
             @empty
                 <li class="p-3 text-sm text-muted">No occurrences generated yet.</li>
