@@ -218,12 +218,132 @@ Before the first deploy on a new server:
 3. Run `php artisan key:generate --force` if `APP_KEY` isn't already set.
 4. Run `./deploy.sh`.
 5. Start the Laravel app under php-fpm/nginx (or equivalent), the scheduler
-   (`php artisan schedule:work`, or a system cron calling
-   `php artisan schedule:run` every minute), the queue worker
-   (`php artisan queue:work`), and the bot (`npm start` in `bot/`) under your
-   process manager.
+   cron entry, the queue worker, and the bot process — see below for all
+   three.
 
 On every subsequent deploy, steps 4–5 collapse to just `./deploy.sh` plus a
 reload of php-fpm/nginx and the process manager picking up the bot's new
 code (most managers restart on their own schedule/health check; force one if
 yours doesn't).
+
+## Production process management
+
+Three things need to stay running continuously in production, and each has
+a different natural fit:
+
+| Process | What it does | Recommended tool |
+|---|---|---|
+| Laravel scheduler | fires `events:*`/`standard-giveaways:*`/`giveaways:close-expired` on their configured intervals | **cron** (not `schedule:work`) |
+| Queue worker (`queue:work`) | executes outbound Discord actions | **Supervisor** |
+| Bot process (`bot/`, Node) | the only thing that talks to Discord | **pm2** |
+
+`schedule:work` (used in local dev above) runs in the foreground and dies
+with your terminal — fine for development, not for production. Supervisor
+and pm2 are the choices below because they're each the tool their own
+ecosystem already expects: Supervisor is what Laravel's own docs recommend
+for `queue:work`, and pm2 is built specifically for exactly this
+(auto-restart, log rotation, boot persistence) with zero PHP-specific setup
+needed. If you'd rather run one tool for everything instead of two, systemd
+unit files work equally well for all three and ship with any modern Linux
+distro already — see the alternative at the bottom of this section.
+
+### 1. Scheduler: cron
+
+Add one line to the deploy user's crontab (`crontab -e`):
+
+```cron
+* * * * * cd /path/to/burrow && php artisan schedule:run >> /dev/null 2>&1
+```
+
+Laravel's scheduler itself decides which of the registered commands
+(`routes/console.php`) are actually due each minute — this single cron
+entry is all production ever needs, regardless of how many scheduled
+commands the app has.
+
+### 2. Queue worker: Supervisor
+
+Install Supervisor (`apt install supervisor` on Debian/Ubuntu), then create
+`/etc/supervisor/conf.d/burrow-queue.conf`:
+
+```ini
+[program:burrow-queue]
+process_name=%(program_name)s_%(process_num)02d
+command=php /path/to/burrow/artisan queue:work --sleep=3 --tries=3 --max-time=3600
+directory=/path/to/burrow
+autostart=true
+autorestart=true
+stopasgroup=true
+killasgroup=true
+numprocs=1
+user=www-data
+redirect_stderr=true
+stdout_logfile=/path/to/burrow/storage/logs/queue-worker.log
+stopwaitsecs=3600
+```
+
+Then:
+
+```bash
+sudo supervisorctl reread
+sudo supervisorctl update
+sudo supervisorctl start burrow-queue:*
+```
+
+`--max-time=3600` makes the worker exit cleanly once an hour; Supervisor
+immediately restarts it, which is Laravel's own recommended way to pick up
+new code after a deploy without a manual restart step (paired with
+`deploy.sh`'s `queue:restart`, which asks in-flight workers to finish their
+current job before that happens, rather than killing them mid-job).
+
+### 3. Bot process: pm2
+
+Install pm2 globally (`npm install -g pm2`), then from `bot/`:
+
+```bash
+pm2 start src/index.js --name burrow-bot
+pm2 save
+pm2 startup   # prints a command to run once, so pm2 restarts on server reboot
+```
+
+To pick up new bot code after a deploy:
+
+```bash
+pm2 restart burrow-bot
+```
+
+Useful pm2 commands while operating it: `pm2 logs burrow-bot`,
+`pm2 status`, `pm2 monit`. pm2 restarts the process automatically if it
+crashes; no extra config needed for that.
+
+### Alternative: systemd for all three
+
+If you'd rather manage everything with one tool, a systemd unit per
+process works too. Example for the bot (`/etc/systemd/system/burrow-bot.service`):
+
+```ini
+[Unit]
+Description=Burrow Discord bot
+After=network.target
+
+[Service]
+Type=simple
+User=www-data
+WorkingDirectory=/path/to/burrow/bot
+ExecStart=/usr/bin/node src/index.js
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
+```
+
+```bash
+sudo systemctl enable --now burrow-bot
+sudo systemctl restart burrow-bot   # after a deploy
+```
+
+The queue worker follows the same shape (`ExecStart=/usr/bin/php
+/path/to/burrow/artisan queue:work --sleep=3 --tries=3`). The scheduler
+still uses cron either way — it's a one-shot command that runs every
+minute and exits, not a long-running process, so it was never a systemd-vs-cron
+choice to begin with.

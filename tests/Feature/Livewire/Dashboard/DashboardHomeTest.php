@@ -18,7 +18,7 @@ it('lists guilds the user administers, linking into each guild pages', function 
         ->assertSee(route('guilds.themes.index', $guild))
         ->assertSee(route('guilds.event-role-sets.index', $guild))
         ->assertSee(route('guilds.events.index', $guild))
-        ->assertSee(route('guilds.giveaways.create', $guild))
+        ->assertSee(route('guilds.giveaways.index', $guild))
         ->assertSee(route('guilds.standard-giveaways.index', $guild));
 });
 

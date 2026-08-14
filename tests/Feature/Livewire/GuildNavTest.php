@@ -20,7 +20,7 @@ it('shows links to the same guild other pages when viewing a guild-scoped page',
         ->assertSee(route('guilds.settings', $guild), false)
         ->assertSee(route('guilds.themes.index', $guild), false)
         ->assertSee(route('guilds.event-role-sets.index', $guild), false)
-        ->assertSee(route('guilds.giveaways.create', $guild), false)
+        ->assertSee(route('guilds.giveaways.index', $guild), false)
         ->assertSee(route('guilds.standard-giveaways.index', $guild), false)
         ->assertSee(route('dashboard'), false);
 });

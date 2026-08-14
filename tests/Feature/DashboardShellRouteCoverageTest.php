@@ -41,6 +41,7 @@ it('renders every full-page guild-scoped route, and the dashboard, over real HTT
         route('guilds.event-role-sets.index', $guild),
         route('guilds.events.index', $guild),
         route('guilds.event-occurrences.show', [$guild, $occurrence]),
+        route('guilds.giveaways.index', $guild),
         route('guilds.giveaways.create', $guild),
         route('guilds.giveaways.show', [$guild, $giveaway]),
         route('guilds.standard-giveaways.index', $stdGuild),

@@ -47,7 +47,7 @@
                         <a href="{{ route('guilds.themes.index', $guild) }}" class="rounded-pill border border-line px-3 py-1.5 text-muted hover:bg-surface-hover hover:text-ink">Collection themes</a>
                         <a href="{{ route('guilds.event-role-sets.index', $guild) }}" class="rounded-pill border border-line px-3 py-1.5 text-muted hover:bg-surface-hover hover:text-ink">Event role sets</a>
                         <a href="{{ route('guilds.events.index', $guild) }}" class="rounded-pill border border-line px-3 py-1.5 text-muted hover:bg-surface-hover hover:text-ink">Events</a>
-                        <a href="{{ route('guilds.giveaways.create', $guild) }}" class="rounded-pill border border-line px-3 py-1.5 text-muted hover:bg-surface-hover hover:text-ink">Giveaways</a>
+                        <a href="{{ route('guilds.giveaways.index', $guild) }}" class="rounded-pill border border-line px-3 py-1.5 text-muted hover:bg-surface-hover hover:text-ink">Popup giveaways</a>
                         <a href="{{ route('guilds.standard-giveaways.index', $guild) }}" class="rounded-pill border border-line px-3 py-1.5 text-muted hover:bg-surface-hover hover:text-ink">Standard giveaways</a>
                     </div>
                 </div>
