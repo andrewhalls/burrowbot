@@ -187,6 +187,9 @@ client.once(Events.ClientReady, async (readyClient) => {
   const restoredCount = await routingStore.rebuildFromLaravel(laravelClient)
   console.log(`Recovered ${restoredCount} active giveaway(s) from Laravel`)
 
+  const guildNames = [...readyClient.guilds.cache.values()].map((guild) => guild.name)
+  console.log(`In ${guildNames.length} guild(s): ${guildNames.join(', ') || '(none)'}`)
+
   // Real-time gateway events (ChannelCreate/Update/Delete) are the primary
   // channel-sync path - this periodic sweep is only a fallback safety net
   // for an event missed while briefly disconnected, hence the long
