@@ -32,14 +32,15 @@ class SubmitStandardGiveawayEntryAction
         string $discordUsername,
         array $discordRoleIds,
         bool $isBoosting,
+        ?string $discordDisplayName = null,
     ): StandardGiveawayEntryResult {
-        return DB::transaction(function () use ($occurrence, $discordUserId, $discordUsername, $discordRoleIds, $isBoosting) {
+        return DB::transaction(function () use ($occurrence, $discordUserId, $discordUsername, $discordRoleIds, $isBoosting, $discordDisplayName) {
             // Locks the occurrence row so concurrent entries on the SAME
             // occurrence serialize here - mirrors JoinGiveawayAction and
             // SignUpForEventRoleAction.
             $locked = StandardGiveawayOccurrence::query()->lockForUpdate()->findOrFail($occurrence->id);
 
-            $member = $this->syncMember->execute($locked->standardGiveaway->guild, $discordUserId, $discordUsername);
+            $member = $this->syncMember->execute($locked->standardGiveaway->guild, $discordUserId, $discordUsername, displayName: $discordDisplayName);
 
             // Authoritative cutoff: independent of `status`.
             if ($locked->hasEnded()) {

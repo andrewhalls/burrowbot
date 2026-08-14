@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use App\Models\CollectionTheme;
+use App\Models\DiscordMember;
 use App\Models\Giveaway;
 use App\Models\GiveawayEntry;
 
@@ -63,6 +64,22 @@ it('returns expired for a giveaway past its end time', function () {
         ->assertStatus(200)
         ->assertJsonPath('status', 'expired')
         ->assertJsonPath('item', null);
+});
+
+it('records the display name on the synced member when provided', function () {
+    $theme = CollectionTheme::factory()->withItems(1)->create();
+    $giveaway = Giveaway::factory()->for($theme, 'collectionTheme')->active()->create();
+
+    $this->withHeaders(botAuthHeader())
+        ->postJson("/internal/giveaways/{$giveaway->id}/entries", [
+            'discord_user_id' => '777',
+            'discord_username' => 'entrant',
+            'discord_display_name' => 'Entrant Display Name',
+        ])
+        ->assertStatus(200);
+
+    $member = DiscordMember::query()->where('discord_user_id', '777')->sole();
+    expect($member->display_name)->toBe('Entrant Display Name');
 });
 
 it('rejects join requests without a valid bot token', function () {

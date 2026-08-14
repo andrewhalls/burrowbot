@@ -18,6 +18,7 @@ class EventSignupRequest extends FormRequest
         return [
             'discord_user_id' => ['required', 'string'],
             'discord_username' => ['required', 'string', 'max:255'],
+            'discord_display_name' => ['sometimes', 'nullable', 'string', 'max:255'],
             'event_role_id' => ['nullable', 'integer', 'exists:event_roles,id'],
         ];
     }

@@ -35,6 +35,56 @@ function actingStaffFor($guild): User
     return $user;
 }
 
+it('offers an Edit toggle only while the giveaway is a draft', function () {
+    $theme = CollectionTheme::factory()->withItems(1)->create();
+    $draft = Giveaway::factory()->for($theme, 'collectionTheme')->create();
+    $active = Giveaway::factory()->for($theme, 'collectionTheme')->active()->create();
+    $staff = actingStaffFor($draft->guild);
+
+    Livewire::actingAs($staff)
+        ->test(GiveawayDashboard::class, ['giveaway' => $draft])
+        ->assertSeeHtml('wire:click="toggleEdit"');
+
+    Livewire::actingAs($staff)
+        ->test(GiveawayDashboard::class, ['giveaway' => $active])
+        ->assertDontSeeHtml('wire:click="toggleEdit"');
+});
+
+it('toggles into and out of the edit form', function () {
+    $theme = CollectionTheme::factory()->withItems(1)->create();
+    $giveaway = Giveaway::factory()->for($theme, 'collectionTheme')->create();
+    $staff = actingStaffFor($giveaway->guild);
+
+    Livewire::actingAs($staff)
+        ->test(GiveawayDashboard::class, ['giveaway' => $giveaway])
+        ->assertDontSeeLivewire('giveaways.edit-giveaway')
+        ->call('toggleEdit')
+        ->assertSeeLivewire('giveaways.edit-giveaway')
+        ->call('toggleEdit')
+        ->assertDontSeeLivewire('giveaways.edit-giveaway');
+});
+
+it('shows who created the giveaway when known', function () {
+    $creator = User::factory()->create(['name' => 'Ada Admin']);
+    $theme = CollectionTheme::factory()->withItems(1)->create();
+    $giveaway = Giveaway::factory()->for($theme, 'collectionTheme')->active()->createdBy($creator)->create();
+    $staff = actingStaffFor($giveaway->guild);
+
+    Livewire::actingAs($staff)
+        ->test(GiveawayDashboard::class, ['giveaway' => $giveaway])
+        ->assertSee('Created by Ada Admin');
+});
+
+it('shows nothing when the giveaway has no recorded creator', function () {
+    $theme = CollectionTheme::factory()->withItems(1)->create();
+    $giveaway = Giveaway::factory()->for($theme, 'collectionTheme')->active()->create();
+    $staff = actingStaffFor($giveaway->guild);
+
+    Livewire::actingAs($staff)
+        ->test(GiveawayDashboard::class, ['giveaway' => $giveaway])
+        ->assertDontSee('Created by');
+});
+
 it('lists only entrants for this giveaway', function () {
     ['giveaway' => $giveaway, 'memberA' => $memberA, 'memberB' => $memberB] = giveawayWithEntries();
     $staff = actingStaffFor($giveaway->guild);

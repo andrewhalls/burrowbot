@@ -7,6 +7,7 @@ namespace Database\Factories;
 use App\Models\Event;
 use App\Models\EventRoleSet;
 use App\Models\Guild;
+use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
@@ -35,6 +36,16 @@ class EventFactory extends Factory
     public function threadMode(): static
     {
         return $this->state(['posting_mode' => Event::POSTING_MODE_THREAD]);
+    }
+
+    public function createdBy(User $user): static
+    {
+        return $this->state(['created_by_user_id' => $user->id]);
+    }
+
+    public function withImage(string $path): static
+    {
+        return $this->state(['image_path' => $path]);
     }
 
     public function recurring(string $rrule, ?\DateTimeInterface $startAt = null, string $timezone = 'UTC'): static

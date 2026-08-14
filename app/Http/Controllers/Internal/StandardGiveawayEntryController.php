@@ -23,6 +23,7 @@ class StandardGiveawayEntryController extends Controller
             $request->string('discord_username')->toString(),
             $request->array('discord_role_ids'),
             $request->boolean('is_boosting'),
+            $request->string('discord_display_name')->toString() ?: null,
         );
 
         return response()->json($result->toArray());

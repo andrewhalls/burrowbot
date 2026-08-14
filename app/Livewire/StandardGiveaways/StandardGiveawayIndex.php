@@ -20,6 +20,8 @@ class StandardGiveawayIndex extends Component
 
     public ?int $selectedId = null;
 
+    public bool $editingSeries = false;
+
     public function mount(Guild $guild): void
     {
         $this->authorize('view', $guild);
@@ -31,6 +33,12 @@ class StandardGiveawayIndex extends Component
     public function closeCreateForm(): void
     {
         $this->showCreateForm = false;
+    }
+
+    #[On('standard-giveaway-updated')]
+    public function closeEditForm(): void
+    {
+        $this->editingSeries = false;
     }
 
     public function setStatus(int $giveawayId, string $status, UpdateStandardGiveawayStatusAction $updateStatus): void
@@ -47,17 +55,29 @@ class StandardGiveawayIndex extends Component
         $exists = StandardGiveaway::query()->where('guild_id', $this->guild->id)->where('id', $giveawayId)->exists();
 
         $this->selectedId = $exists ? $giveawayId : null;
+        $this->editingSeries = false;
     }
 
     public function deselect(): void
     {
         $this->selectedId = null;
+        $this->editingSeries = false;
+    }
+
+    public function toggleEditSeries(): void
+    {
+        $giveaway = StandardGiveaway::query()->where('guild_id', $this->guild->id)->findOrFail($this->selectedId);
+
+        $this->authorize('manage', $giveaway);
+
+        $this->editingSeries = ! $this->editingSeries;
     }
 
     public function render(): View
     {
         $giveaways = $this->guild->standardGiveaways()
             ->withCount('prizeItems')
+            ->with('creator')
             ->orderByDesc('created_at')
             ->get();
 

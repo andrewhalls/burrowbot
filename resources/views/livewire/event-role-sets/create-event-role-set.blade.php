@@ -35,7 +35,7 @@
         @error('roles') <p class="text-danger text-xs mt-1">{{ $message }}</p> @enderror
     </div>
 
-    <button type="button" wire:click="save" class="rounded-control bg-accent hover:bg-accent-hover px-4 py-2 text-sm font-medium">
+    <button type="button" wire:click="save" class="rounded-control bg-accent hover:bg-accent-hover px-4 py-2 text-sm font-medium text-accent-ink">
         Create role set
     </button>
 </div>

@@ -41,6 +41,7 @@ class PostDueEventOccurrences extends Command
                     'channel_id' => $occurrence->channel_id,
                     'title' => $occurrence->title,
                     'description' => $occurrence->description,
+                    'image_url' => $occurrence->image_url,
                     'scheduled_start_at' => $occurrence->scheduled_start_at->toIso8601String(),
                     'roles' => $occurrence->eventRoleSet->roles->map(fn ($role) => [
                         'id' => $role->id,

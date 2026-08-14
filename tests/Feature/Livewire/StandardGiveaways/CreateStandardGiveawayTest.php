@@ -109,6 +109,27 @@ it('persists the selected roles as StandardGiveawayRequiredRole rows on save', f
         ->toBe([$role->discord_role_id]);
 });
 
+it('records the authenticated admin as the creator', function () {
+    $guild = Guild::factory()->create();
+    $theme = CollectionTheme::factory()->for($guild)->withItems(1)->create();
+    $item = $theme->items->first();
+    $staff = actingEventStaffFor($guild);
+
+    Livewire::actingAs($staff)
+        ->test(CreateStandardGiveaway::class, ['guild' => $guild])
+        ->set('title', 'Nitro Friday')
+        ->set('description', 'One lucky booster')
+        ->set('channelId', '123456')
+        ->set('startDate', now()->addWeek()->toDateString())
+        ->set('startTime', '20:00')
+        ->call('addPrizeItem', $item->id)
+        ->call('save')
+        ->assertHasNoErrors();
+
+    $giveaway = StandardGiveaway::query()->where('title', 'Nitro Friday')->sole();
+    expect($giveaway->created_by_user_id)->toBe($staff->id);
+});
+
 it('creates a one-off standard giveaway', function () {
     $guild = Guild::factory()->create();
     $theme = CollectionTheme::factory()->for($guild)->withItems(1)->create(['name' => 'Retro Arcade']);

@@ -11,6 +11,7 @@ use App\Models\GiveawayEntry;
 use Illuminate\Contracts\View\View;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\Auth;
+use Livewire\Attributes\On;
 use Livewire\Attributes\Url;
 use Livewire\Component;
 use Livewire\WithPagination;
@@ -24,6 +25,8 @@ class GiveawayDashboard extends Component
     use WithPagination;
 
     public Giveaway $giveaway;
+
+    public bool $editing = false;
 
     #[Url]
     public string $search = '';
@@ -62,6 +65,20 @@ class GiveawayDashboard extends Component
         $this->authorize('manage', $this->giveaway);
 
         $this->giveaway = $startGiveaway->execute($this->giveaway);
+    }
+
+    public function toggleEdit(): void
+    {
+        $this->authorize('manage', $this->giveaway);
+
+        $this->editing = ! $this->editing;
+    }
+
+    #[On('giveaway-updated')]
+    public function refreshAfterEdit(): void
+    {
+        $this->giveaway->refresh();
+        $this->editing = false;
     }
 
     public function render(): View

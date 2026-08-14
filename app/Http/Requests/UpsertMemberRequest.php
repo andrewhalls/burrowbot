@@ -17,6 +17,7 @@ class UpsertMemberRequest extends FormRequest
     {
         return [
             'username' => ['required', 'string', 'max:255'],
+            'display_name' => ['sometimes', 'nullable', 'string', 'max:255'],
             'avatar_url' => ['sometimes', 'nullable', 'string', 'max:2048'],
         ];
     }

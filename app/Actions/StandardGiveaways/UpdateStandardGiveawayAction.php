@@ -18,9 +18,18 @@ use Illuminate\Support\Facades\Storage;
  */
 class UpdateStandardGiveawayAction
 {
+    /**
+     * @param  array<string, mixed>  $attributes  May include 'prize_item_ids'
+     *   (list<int> of collection theme item ids) and/or 'required_role_ids'
+     *   (list<string> of Discord role ids) - when present, the giveaway's
+     *   prize items/required roles are replaced wholesale with the given
+     *   set (design.md Decision 3), matching the full-list-sync pattern
+     *   already used for Discord channel/role sync. Omitting either key
+     *   entirely leaves that set untouched.
+     */
     public function execute(StandardGiveaway $giveaway, array $attributes): StandardGiveaway
     {
-        $attributes = array_intersect_key(
+        $scalarAttributes = array_intersect_key(
             $attributes,
             array_flip([
                 'title', 'description', 'channel_id', 'posting_mode', 'winner_count',
@@ -38,16 +47,32 @@ class UpdateStandardGiveawayAction
         // implementation).
         $oldPath = $giveaway->image_path;
         if (
-            array_key_exists('image_path', $attributes)
+            array_key_exists('image_path', $scalarAttributes)
             && $oldPath !== null
-            && $oldPath !== $attributes['image_path']
+            && $oldPath !== $scalarAttributes['image_path']
             && ! StandardGiveawayOccurrence::query()->where('image_path', $oldPath)->exists()
         ) {
             Storage::disk('public')->delete($oldPath);
         }
 
-        $giveaway->fill($attributes)->save();
+        $giveaway->fill($scalarAttributes)->save();
 
-        return $giveaway;
+        if (array_key_exists('prize_item_ids', $attributes)) {
+            $giveaway->prizeItems()->delete();
+
+            foreach (array_values(array_unique($attributes['prize_item_ids'])) as $itemId) {
+                $giveaway->prizeItems()->create(['collection_theme_item_id' => $itemId]);
+            }
+        }
+
+        if (array_key_exists('required_role_ids', $attributes)) {
+            $giveaway->requiredRoles()->delete();
+
+            foreach (array_values(array_unique($attributes['required_role_ids'])) as $roleId) {
+                $giveaway->requiredRoles()->create(['discord_role_id' => $roleId]);
+            }
+        }
+
+        return $giveaway->load('prizeItems', 'requiredRoles');
     }
 }

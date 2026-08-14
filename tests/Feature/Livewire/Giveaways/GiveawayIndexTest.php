@@ -32,6 +32,19 @@ it('lists popup giveaways for the guild with status and entrant count', function
         ->assertSee('Active');
 });
 
+it('shows who created a giveaway when known, and nothing when not', function () {
+    $guild = Guild::factory()->create();
+    $theme = CollectionTheme::factory()->for($guild)->create();
+    $creator = User::factory()->create(['name' => 'Ada Admin']);
+    Giveaway::factory()->for($theme, 'collectionTheme')->for($guild)->createdBy($creator)->create();
+    Giveaway::factory()->for($theme, 'collectionTheme')->for($guild)->create();
+    $staff = actingGiveawayStaffFor($guild);
+
+    Livewire::actingAs($staff)
+        ->test(GiveawayIndex::class, ['guild' => $guild])
+        ->assertSee('Created by Ada Admin');
+});
+
 it('shows a giveaway\'s description and image when set', function () {
     $guild = Guild::factory()->create();
     $theme = CollectionTheme::factory()->for($guild)->create();

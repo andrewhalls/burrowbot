@@ -24,6 +24,19 @@ it('generates occurrences for an active weekly recurring event', function () {
         ->and($first->status)->toBe(EventOccurrence::STATUS_SCHEDULED);
 });
 
+it('snapshots the event\'s current image into generated occurrences', function () {
+    $event = Event::factory()->withImage('event-images/abc.jpg')->recurring(
+        'FREQ=WEEKLY;BYDAY=WE',
+        now()->next('Wednesday')->setTime(20, 0),
+        'UTC',
+    )->create();
+
+    $this->artisan('events:generate-occurrences')->assertSuccessful();
+
+    $first = $event->occurrences()->orderBy('scheduled_start_at')->first();
+    expect($first->image_path)->toBe('event-images/abc.jpg');
+});
+
 it('does not generate duplicate occurrences on a second run', function () {
     $event = Event::factory()->recurring(
         'FREQ=WEEKLY;BYDAY=WE',

@@ -4,10 +4,12 @@ declare(strict_types=1);
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Facades\Storage;
 
 class Event extends Model
 {
@@ -26,9 +28,11 @@ class Event extends Model
 
     protected $fillable = [
         'guild_id',
+        'created_by_user_id',
         'event_role_set_id',
         'title',
         'description',
+        'image_path',
         'channel_id',
         'posting_mode',
         'status',
@@ -45,11 +49,29 @@ class Event extends Model
     }
 
     /**
+     * @return Attribute<string|null, never>
+     */
+    protected function imageUrl(): Attribute
+    {
+        return Attribute::make(
+            get: fn () => $this->image_path ? Storage::disk('public')->url($this->image_path) : null,
+        );
+    }
+
+    /**
      * @return BelongsTo<Guild, $this>
      */
     public function guild(): BelongsTo
     {
         return $this->belongsTo(Guild::class);
+    }
+
+    /**
+     * @return BelongsTo<User, $this>
+     */
+    public function creator(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'created_by_user_id');
     }
 
     /**

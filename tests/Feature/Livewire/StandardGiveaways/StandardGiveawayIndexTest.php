@@ -19,6 +19,32 @@ it('lists standard giveaways for the guild', function () {
         ->assertSee('Nitro Friday');
 });
 
+it('shows who created a standard giveaway when known', function () {
+    $guild = Guild::factory()->create();
+    $creator = User::factory()->create(['name' => 'Ada Admin']);
+    StandardGiveaway::factory()->for($guild)->createdBy($creator)->create(['title' => 'Nitro Friday']);
+    $staff = actingEventStaffFor($guild);
+
+    Livewire::actingAs($staff)
+        ->test(StandardGiveawayIndex::class, ['guild' => $guild])
+        ->assertSee('Created by Ada Admin');
+});
+
+it('toggles into and out of the edit series form for the selected giveaway', function () {
+    $guild = Guild::factory()->create();
+    $giveaway = StandardGiveaway::factory()->for($guild)->create();
+    $staff = actingEventStaffFor($guild);
+
+    Livewire::actingAs($staff)
+        ->test(StandardGiveawayIndex::class, ['guild' => $guild])
+        ->call('select', $giveaway->id)
+        ->assertDontSeeLivewire('standard-giveaways.edit-standard-giveaway')
+        ->call('toggleEditSeries')
+        ->assertSeeLivewire('standard-giveaways.edit-standard-giveaway')
+        ->call('toggleEditSeries')
+        ->assertDontSeeLivewire('standard-giveaways.edit-standard-giveaway');
+});
+
 it('shows a standard giveaway\'s image when set', function () {
     $guild = Guild::factory()->create();
     StandardGiveaway::factory()->for($guild)->withImage('standard-giveaway-images/abc.jpg')->create(['title' => 'Boosted Night']);

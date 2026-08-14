@@ -29,9 +29,18 @@ const routingStore = createMessageRoutingStore()
 
 const client = new Client({ intents: [GatewayIntentBits.Guilds] })
 
-async function upsertObservedMember(guild, user) {
+// A member's displayed name in Discord's own UI: their per-guild nickname
+// if set, else their account-level display name, else their raw username -
+// `GuildMember.displayName` already resolves that chain. `member` may be a
+// partial/raw payload without a working `.displayName` getter in rare
+// caching states, so fall back through `user.globalName` to `user.username`.
+function resolveDisplayName(member, user) {
+  return member?.displayName ?? user.globalName ?? user.username
+}
+
+async function upsertObservedMember(guild, member, user) {
   try {
-    await laravelClient.upsertMember(guild.id, user.id, user.username, user.displayAvatarURL())
+    await laravelClient.upsertMember(guild.id, user.id, user.username, user.displayAvatarURL(), resolveDisplayName(member, user))
   } catch (error) {
     console.error(`Failed to sync member ${user.id} in guild ${guild.id}:`, error)
   }
@@ -117,10 +126,16 @@ client.on(Events.GuildUpdate, async (_oldGuild, newGuild) => {
 })
 
 async function handleEventSignupInteraction(interaction, occurrenceId, eventRoleId) {
-  await upsertObservedMember(interaction.guild, interaction.user)
+  await upsertObservedMember(interaction.guild, interaction.member, interaction.user)
 
   try {
-    const result = await laravelClient.signUpForEventOccurrence(occurrenceId, interaction.user.id, interaction.user.username, eventRoleId)
+    const result = await laravelClient.signUpForEventOccurrence(
+      occurrenceId,
+      interaction.user.id,
+      interaction.user.username,
+      eventRoleId,
+      resolveDisplayName(interaction.member, interaction.user),
+    )
     await interaction.reply({ content: eventSignupResultReply(result), ephemeral: true })
   } catch (error) {
     console.error(`Failed to process event signup for occurrence ${occurrenceId}:`, error)
@@ -147,7 +162,7 @@ function memberIsBoosting(member) {
 }
 
 async function handleStandardGiveawayEntryInteraction(interaction, occurrenceId) {
-  await upsertObservedMember(interaction.guild, interaction.user)
+  await upsertObservedMember(interaction.guild, interaction.member, interaction.user)
 
   try {
     const result = await laravelClient.submitStandardGiveawayEntry(
@@ -156,6 +171,7 @@ async function handleStandardGiveawayEntryInteraction(interaction, occurrenceId)
       interaction.user.username,
       memberRoleIds(interaction.member),
       memberIsBoosting(interaction.member),
+      resolveDisplayName(interaction.member, interaction.user),
     )
     await interaction.reply({ content: standardGiveawayEntryResultReply(result), ephemeral: true })
   } catch (error) {
@@ -166,7 +182,7 @@ async function handleStandardGiveawayEntryInteraction(interaction, occurrenceId)
 
 client.on(Events.InteractionCreate, async (interaction) => {
   if (interaction.isButton() && interaction.customId === JOIN_GIVEAWAY_BUTTON_ID) {
-    await upsertObservedMember(interaction.guild, interaction.user)
+    await upsertObservedMember(interaction.guild, interaction.member, interaction.user)
 
     const giveawayId = routingStore.giveawayIdForMessage(interaction.message.id)
 
@@ -176,7 +192,12 @@ client.on(Events.InteractionCreate, async (interaction) => {
     }
 
     try {
-      const result = await laravelClient.joinGiveaway(giveawayId, interaction.user.id, interaction.user.username)
+      const result = await laravelClient.joinGiveaway(
+        giveawayId,
+        interaction.user.id,
+        interaction.user.username,
+        resolveDisplayName(interaction.member, interaction.user),
+      )
       await interaction.reply(buildJoinInteractionReplyOptions(result, interaction.user.id))
     } catch (error) {
       console.error(`Failed to process join for giveaway ${giveawayId}:`, error)

@@ -20,7 +20,7 @@ class CreateCollectionThemeAction
     /**
      * @param  list<string>  $itemNames
      */
-    public function execute(Guild $guild, string $name, array $itemNames): CollectionTheme
+    public function execute(Guild $guild, string $name, array $itemNames, ?string $imagePath = null): CollectionTheme
     {
         $itemNames = array_values(array_filter(
             array_map('trim', $itemNames),
@@ -31,8 +31,8 @@ class CreateCollectionThemeAction
             throw new InvalidArgumentException('A collection theme must have at least one item.');
         }
 
-        return DB::transaction(function () use ($guild, $name, $itemNames) {
-            $theme = $guild->collectionThemes()->create(['name' => $name]);
+        return DB::transaction(function () use ($guild, $name, $itemNames, $imagePath) {
+            $theme = $guild->collectionThemes()->create(['name' => $name, 'image_path' => $imagePath]);
 
             foreach ($itemNames as $index => $itemName) {
                 $theme->items()->create(['name' => $itemName, 'sort_order' => $index]);

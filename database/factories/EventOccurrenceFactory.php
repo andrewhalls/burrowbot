@@ -42,10 +42,16 @@ class EventOccurrenceFactory extends Factory
             'event_id' => $event->id,
             'title' => $event->title,
             'description' => $event->description,
+            'image_path' => $event->image_path,
             'channel_id' => $event->channel_id,
             'posting_mode' => $event->posting_mode,
             'event_role_set_id' => $event->event_role_set_id,
         ]);
+    }
+
+    public function withImage(string $path): static
+    {
+        return $this->state(['image_path' => $path]);
     }
 
     public function posted(): static

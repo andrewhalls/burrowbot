@@ -25,12 +25,12 @@ class MarkNotAttendingAction
         private readonly PromoteFromWaitlistAction $promoteFromWaitlist,
     ) {}
 
-    public function execute(EventOccurrence $occurrence, string $discordUserId, string $discordUsername): SignupResult
+    public function execute(EventOccurrence $occurrence, string $discordUserId, string $discordUsername, ?string $discordDisplayName = null): SignupResult
     {
-        return DB::transaction(function () use ($occurrence, $discordUserId, $discordUsername) {
+        return DB::transaction(function () use ($occurrence, $discordUserId, $discordUsername, $discordDisplayName) {
             $locked = EventOccurrence::query()->lockForUpdate()->findOrFail($occurrence->id);
 
-            $member = $this->syncMember->execute($locked->event->guild, $discordUserId, $discordUsername);
+            $member = $this->syncMember->execute($locked->event->guild, $discordUserId, $discordUsername, displayName: $discordDisplayName);
 
             if ($locked->hasStarted()) {
                 return SignupResult::rejected('This event has already started.');

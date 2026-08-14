@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -19,8 +20,22 @@ class DiscordMember extends Model
         'guild_id',
         'discord_user_id',
         'username',
+        'display_name',
         'avatar_url',
     ];
+
+    /**
+     * The name to show in the dashboard: their Discord display name
+     * (nickname-aware) when known, else their raw username.
+     *
+     * @return Attribute<string, never>
+     */
+    protected function displayNameOrUsername(): Attribute
+    {
+        return Attribute::make(
+            get: fn () => $this->display_name ?: $this->username,
+        );
+    }
 
     /**
      * @return BelongsTo<Guild, $this>

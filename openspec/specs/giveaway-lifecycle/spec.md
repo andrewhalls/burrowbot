@@ -7,11 +7,11 @@ Governs creating, starting, and time-bounding a single pop-up giveaway run in on
 ## Requirements
 
 ### Requirement: Giveaway creation
-The system SHALL allow a guild admin to create a giveaway by specifying a Discord channel, a collection theme (from `collection-themes`), a duration in whole minutes, and optionally a description and an image, scoped to their guild.
+The system SHALL allow a guild admin to create a giveaway by specifying a Discord channel, a collection theme (from `collection-themes`), a duration in whole minutes, and optionally a description and an image, scoped to their guild, and SHALL record which admin created it.
 
 #### Scenario: Valid draft created
 - **WHEN** a guild admin submits a channel, an existing collection theme belonging to their guild, and a duration of 1 or more minutes
-- **THEN** the system creates a giveaway in `draft` state with those values, not yet visible in Discord
+- **THEN** the system creates a giveaway in `draft` state with those values, not yet visible in Discord, recorded as created by that admin
 
 #### Scenario: Invalid duration rejected
 - **WHEN** a guild admin submits a duration of zero, negative, or non-integer minutes
@@ -24,6 +24,14 @@ The system SHALL allow a guild admin to create a giveaway by specifying a Discor
 #### Scenario: Description and image recorded when provided
 - **WHEN** a guild admin creates a giveaway with a description and an uploaded image
 - **THEN** the system records both against the giveaway
+
+#### Scenario: Creator shown wherever the giveaway is displayed
+- **WHEN** staff view a giveaway's list tile or detail view
+- **THEN** the system shows which admin created it, when that information was recorded
+
+#### Scenario: Pre-existing giveaways show no creator
+- **WHEN** staff view a giveaway created before this capability existed
+- **THEN** the system shows no creator for it, rather than guessing one
 
 ### Requirement: Starting a giveaway
 The system SHALL, when a draft giveaway is started, post it to Discord and record the exact moment it will close.
@@ -64,3 +72,14 @@ The system SHALL allow a guild admin to set a future date/time when creating a g
 #### Scenario: Manual start still available before the scheduled time
 - **WHEN** a guild admin manually starts a giveaway that has a future scheduled start time, before that time arrives
 - **THEN** the system starts it immediately per the existing "Starting a giveaway" requirement, and the now-moot scheduled start never fires
+
+### Requirement: Editing a draft giveaway
+The system SHALL allow a guild admin to edit a `draft` giveaway's channel, collection theme, duration, description, and image before it is started.
+
+#### Scenario: Editing a draft giveaway
+- **WHEN** a guild admin edits a `draft` giveaway's channel, collection theme, duration, description, or image
+- **THEN** the system saves the change, and the giveaway remains in `draft` state
+
+#### Scenario: Editing rejected once no longer a draft
+- **WHEN** a guild admin attempts to edit a giveaway that has already been started or closed
+- **THEN** the system rejects the edit, per "Giveaway configuration immutability once started"

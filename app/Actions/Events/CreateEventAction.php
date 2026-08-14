@@ -8,6 +8,7 @@ use App\Models\Event;
 use App\Models\EventOccurrence;
 use App\Models\EventRoleSet;
 use App\Models\Guild;
+use App\Models\User;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -32,15 +33,19 @@ class CreateEventAction
         ?string $recurrenceRule,
         ?\DateTimeInterface $recurrenceStartAt,
         ?string $recurrenceTimezone,
+        ?string $imagePath = null,
+        ?User $createdBy = null,
     ): Event {
         return DB::transaction(function () use (
             $guild, $roleSet, $title, $description, $channelId, $postingMode,
-            $recurrenceRule, $recurrenceStartAt, $recurrenceTimezone,
+            $recurrenceRule, $recurrenceStartAt, $recurrenceTimezone, $imagePath, $createdBy,
         ) {
             $event = $guild->events()->create([
+                'created_by_user_id' => $createdBy?->id,
                 'event_role_set_id' => $roleSet->id,
                 'title' => $title,
                 'description' => $description,
+                'image_path' => $imagePath,
                 'channel_id' => $channelId,
                 'posting_mode' => $postingMode,
                 'status' => Event::STATUS_ACTIVE,
@@ -53,6 +58,7 @@ class CreateEventAction
                 $event->occurrences()->create([
                     'title' => $event->title,
                     'description' => $event->description,
+                    'image_path' => $event->image_path,
                     'channel_id' => $event->channel_id,
                     'posting_mode' => $event->posting_mode,
                     'event_role_set_id' => $event->event_role_set_id,

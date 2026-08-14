@@ -31,6 +31,9 @@
                             {{ $event->eventRoleSet->name }} &middot;
                             {{ $event->isRecurring() ? 'Recurring' : 'One-off' }}
                         </p>
+                        @if ($event->creator)
+                            <p class="text-xs text-muted mt-1 truncate">Created by {{ $event->creator->name }}</p>
+                        @endif
                         <div class="mt-auto pt-2 flex gap-2 text-xs flex-wrap">
                             @if ($event->status !== 'active')
                                 <button type="button" wire:click.stop="setStatus({{ $event->id }}, 'active')" class="text-success hover:text-success">Activate</button>
@@ -58,7 +61,18 @@
                     <livewire:events.occurrence-roster :occurrence="$selectedOccurrence" :key="'occurrence-roster-'.$selectedOccurrence->id" />
                 </div>
             @elseif ($selectedEvent)
-                @include('livewire.events.partials.event-summary', ['event' => $selectedEvent])
+                <div class="flex justify-end mb-3">
+                    <button type="button" wire:click="toggleEdit"
+                            class="rounded-pill bg-surface-hover hover:bg-line px-4 py-2 text-sm font-medium text-ink">
+                        {{ $editing ? 'Cancel' : 'Edit' }}
+                    </button>
+                </div>
+
+                @if ($editing)
+                    <livewire:events.edit-event :event="$selectedEvent" :key="'edit-event-'.$selectedEvent->id" />
+                @else
+                    @include('livewire.events.partials.event-summary', ['event' => $selectedEvent])
+                @endif
             @endif
         </x-slot:detail>
     </x-list-detail-shell>

@@ -8,6 +8,7 @@ use App\Models\CollectionThemeItem;
 use App\Models\Guild;
 use App\Models\StandardGiveaway;
 use App\Models\StandardGiveawayOccurrence;
+use App\Models\User;
 
 it('creates a one-off giveaway with a single occurrence immediately', function () {
     $guild = Guild::factory()->create();
@@ -58,6 +59,35 @@ it('stores required role ids', function () {
     );
 
     expect($giveaway->requiredRoles->pluck('discord_role_id')->all())->toBe(['111', '222']);
+});
+
+it('records the creator when provided', function () {
+    $guild = Guild::factory()->create();
+    $theme = CollectionTheme::factory()->for($guild)->withItems(1)->create();
+    $item = $theme->items->first();
+    $user = User::factory()->create();
+
+    $giveaway = (new CreateStandardGiveawayAction)->execute(
+        $guild, 'Nitro Friday', 'One lucky booster', '12345', StandardGiveaway::POSTING_MODE_MESSAGE,
+        1, true, 10080, [$item->id], [],
+        null, now()->addWeek(), 'UTC', createdBy: $user,
+    );
+
+    expect($giveaway->created_by_user_id)->toBe($user->id);
+});
+
+it('leaves the creator null when not provided', function () {
+    $guild = Guild::factory()->create();
+    $theme = CollectionTheme::factory()->for($guild)->withItems(1)->create();
+    $item = $theme->items->first();
+
+    $giveaway = (new CreateStandardGiveawayAction)->execute(
+        $guild, 'Nitro Friday', 'One lucky booster', '12345', StandardGiveaway::POSTING_MODE_MESSAGE,
+        1, true, 10080, [$item->id], [],
+        null, now()->addWeek(), 'UTC',
+    );
+
+    expect($giveaway->created_by_user_id)->toBeNull();
 });
 
 it('rejects zero prize items and creates nothing', function () {

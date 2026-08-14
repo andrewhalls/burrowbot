@@ -37,4 +37,9 @@ class CollectionThemeFactory extends Factory
                 ->create();
         });
     }
+
+    public function withImage(): static
+    {
+        return $this->state(fn () => ['image_path' => 'theme-images/'.fake()->uuid().'.png']);
+    }
 }

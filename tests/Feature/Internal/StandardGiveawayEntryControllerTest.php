@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Models\DiscordMember;
 use App\Models\StandardGiveawayEntry;
 use App\Models\StandardGiveawayOccurrence;
 
@@ -61,6 +62,21 @@ it('returns closed for an ended occurrence', function () {
         ])
         ->assertStatus(200)
         ->assertJsonPath('status', 'closed');
+});
+
+it('records the display name on the synced member when provided', function () {
+    $occurrence = StandardGiveawayOccurrence::factory()->posted()->create(['ends_at' => now()->addDay()]);
+
+    $this->withHeaders(botAuthHeader())
+        ->postJson("/internal/standard-giveaway-occurrences/{$occurrence->id}/entries", [
+            'discord_user_id' => '111',
+            'discord_username' => 'entrant',
+            'discord_display_name' => 'Entrant Display Name',
+        ])
+        ->assertStatus(200);
+
+    $member = DiscordMember::query()->where('discord_user_id', '111')->sole();
+    expect($member->display_name)->toBe('Entrant Display Name');
 });
 
 it('rejects entry requests without a valid bot token', function () {

@@ -41,6 +41,9 @@
                         @if ($giveaway->description)
                             <p class="text-xs text-muted mt-1 truncate">{{ $giveaway->description }}</p>
                         @endif
+                        @if ($giveaway->creator)
+                            <p class="text-xs text-muted mt-1 truncate">Created by {{ $giveaway->creator->name }}</p>
+                        @endif
                         <div class="mt-auto pt-2 flex gap-2 text-xs flex-wrap">
                             @if ($giveaway->status !== 'active')
                                 <button type="button" wire:click.stop="setStatus({{ $giveaway->id }}, 'active')" class="text-success hover:text-success">Activate</button>
@@ -62,7 +65,18 @@
         </x-slot:list>
 
         <x-slot:detail>
-            @if ($selectedOccurrence)
+            @if ($selectedGiveaway)
+                <div class="flex justify-end mb-3">
+                    <button type="button" wire:click="toggleEditSeries"
+                            class="rounded-pill bg-surface-hover hover:bg-line px-4 py-2 text-sm font-medium text-ink">
+                        {{ $editingSeries ? 'Cancel' : 'Edit series' }}
+                    </button>
+                </div>
+            @endif
+
+            @if ($editingSeries && $selectedGiveaway)
+                <livewire:standard-giveaways.edit-standard-giveaway :giveaway="$selectedGiveaway" :key="'edit-std-giveaway-'.$selectedGiveaway->id" />
+            @elseif ($selectedOccurrence)
                 <livewire:standard-giveaways.occurrence-dashboard :occurrence="$selectedOccurrence" :key="'std-giveaway-detail-'.$selectedOccurrence->id" />
             @elseif ($selectedGiveaway)
                 <x-list-detail-empty message="No occurrences generated for this giveaway yet." />

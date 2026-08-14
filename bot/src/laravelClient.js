@@ -40,10 +40,10 @@ export function createLaravelClient({ baseUrl, serviceToken, fetchImpl = fetch }
       })
     },
 
-    upsertMember(discordGuildId, discordUserId, username, avatarUrl) {
+    upsertMember(discordGuildId, discordUserId, username, avatarUrl, displayName) {
       return request(`/internal/guilds/${discordGuildId}/members/${discordUserId}`, {
         method: 'PUT',
-        body: JSON.stringify({ username, avatar_url: avatarUrl }),
+        body: JSON.stringify({ username, avatar_url: avatarUrl, display_name: displayName }),
       })
     },
 
@@ -61,10 +61,14 @@ export function createLaravelClient({ baseUrl, serviceToken, fetchImpl = fetch }
       })
     },
 
-    joinGiveaway(giveawayId, discordUserId, discordUsername) {
+    joinGiveaway(giveawayId, discordUserId, discordUsername, discordDisplayName) {
       return request(`/internal/giveaways/${giveawayId}/entries`, {
         method: 'POST',
-        body: JSON.stringify({ discord_user_id: discordUserId, discord_username: discordUsername }),
+        body: JSON.stringify({
+          discord_user_id: discordUserId,
+          discord_username: discordUsername,
+          discord_display_name: discordDisplayName,
+        }),
       })
     },
 
@@ -96,23 +100,25 @@ export function createLaravelClient({ baseUrl, serviceToken, fetchImpl = fetch }
       })
     },
 
-    signUpForEventOccurrence(occurrenceId, discordUserId, discordUsername, eventRoleId) {
+    signUpForEventOccurrence(occurrenceId, discordUserId, discordUsername, eventRoleId, discordDisplayName) {
       return request(`/internal/event-occurrences/${occurrenceId}/signups`, {
         method: 'POST',
         body: JSON.stringify({
           discord_user_id: discordUserId,
           discord_username: discordUsername,
+          discord_display_name: discordDisplayName,
           ...(eventRoleId ? { event_role_id: eventRoleId } : {}),
         }),
       })
     },
 
-    submitStandardGiveawayEntry(occurrenceId, discordUserId, discordUsername, discordRoleIds, isBoosting) {
+    submitStandardGiveawayEntry(occurrenceId, discordUserId, discordUsername, discordRoleIds, isBoosting, discordDisplayName) {
       return request(`/internal/standard-giveaway-occurrences/${occurrenceId}/entries`, {
         method: 'POST',
         body: JSON.stringify({
           discord_user_id: discordUserId,
           discord_username: discordUsername,
+          discord_display_name: discordDisplayName,
           discord_role_ids: discordRoleIds,
           is_boosting: isBoosting,
         }),

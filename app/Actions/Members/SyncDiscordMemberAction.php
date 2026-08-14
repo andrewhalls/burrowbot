@@ -17,11 +17,11 @@ use App\Models\Guild;
  */
 class SyncDiscordMemberAction
 {
-    public function execute(Guild $guild, string $discordUserId, string $username, ?string $avatarUrl = null): DiscordMember
+    public function execute(Guild $guild, string $discordUserId, string $username, ?string $avatarUrl = null, ?string $displayName = null): DiscordMember
     {
         return DiscordMember::query()->updateOrCreate(
             ['guild_id' => $guild->id, 'discord_user_id' => $discordUserId],
-            ['username' => $username, 'avatar_url' => $avatarUrl],
+            ['username' => $username, 'avatar_url' => $avatarUrl, 'display_name' => $displayName],
         );
     }
 }

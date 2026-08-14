@@ -21,6 +21,19 @@ it('lists themed collections for the guild with their item count', function () {
         ->assertSee('3 items');
 });
 
+it('shows a theme\'s image in its tile when set, and the fallback glyph when not', function () {
+    $user = User::factory()->create();
+    $guild = Guild::factory()->create();
+    GuildAdmin::factory()->for($guild)->for($user)->create();
+    $withImage = CollectionTheme::factory()->for($guild)->withItems(1)->withImage()->create(['name' => 'Has Image']);
+    CollectionTheme::factory()->for($guild)->withItems(1)->create(['name' => 'No Image']);
+
+    Livewire::actingAs($user)
+        ->test(CollectionThemeIndex::class, ['guild' => $guild])
+        ->assertSee($withImage->image_url, false)
+        ->assertSeeHtml('<svg');
+});
+
 it('shows only the selected theme\'s item-management UI in the detail panel', function () {
     $user = User::factory()->create();
     $guild = Guild::factory()->create();

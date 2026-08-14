@@ -76,6 +76,24 @@ it('creates a giveaway with no description or image left unset', function () {
         ->and($giveaway->image_path)->toBeNull();
 });
 
+it('records the authenticated admin as the creator', function () {
+    $user = User::factory()->create();
+    $guild = Guild::factory()->create();
+    GuildAdmin::factory()->for($guild)->for($user)->create();
+    $theme = CollectionTheme::factory()->for($guild)->create();
+
+    Livewire::actingAs($user)
+        ->test(CreateGiveaway::class, ['guild' => $guild])
+        ->set('channelId', '123456')
+        ->set('collectionThemeId', $theme->id)
+        ->set('durationMinutes', 15)
+        ->call('save')
+        ->assertHasNoErrors();
+
+    $giveaway = Giveaway::query()->where('guild_id', $guild->id)->sole();
+    expect($giveaway->created_by_user_id)->toBe($user->id);
+});
+
 it('rejects an oversized image upload', function () {
     Storage::fake('public');
 

@@ -34,6 +34,24 @@ it('enqueues a post_event_occurrence_thread action for a thread-mode occurrence'
     expect($action->type)->toBe(DiscordOutboundAction::TYPE_POST_EVENT_OCCURRENCE_THREAD);
 });
 
+it('includes the occurrence\'s image url in the outbound payload when set', function () {
+    $occurrence = EventOccurrence::factory()->withImage('event-images/abc.jpg')->create();
+
+    $this->artisan('events:post-due-occurrences');
+
+    $action = DiscordOutboundAction::query()->where('event_occurrence_id', $occurrence->id)->first();
+    expect($action->payload['image_url'])->toContain('event-images/abc.jpg');
+});
+
+it('leaves the image url null in the outbound payload when unset', function () {
+    $occurrence = EventOccurrence::factory()->create();
+
+    $this->artisan('events:post-due-occurrences');
+
+    $action = DiscordOutboundAction::query()->where('event_occurrence_id', $occurrence->id)->first();
+    expect($action->payload['image_url'])->toBeNull();
+});
+
 it('does not re-post an already-posted occurrence', function () {
     $occurrence = EventOccurrence::factory()->posted()->create();
 

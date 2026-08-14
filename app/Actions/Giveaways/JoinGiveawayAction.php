@@ -24,16 +24,16 @@ class JoinGiveawayAction
         private readonly AssignRandomItem $assignRandomItem,
     ) {}
 
-    public function execute(Giveaway $giveaway, string $discordUserId, string $discordUsername): JoinResult
+    public function execute(Giveaway $giveaway, string $discordUserId, string $discordUsername, ?string $discordDisplayName = null): JoinResult
     {
-        return DB::transaction(function () use ($giveaway, $discordUserId, $discordUsername) {
+        return DB::transaction(function () use ($giveaway, $discordUserId, $discordUsername, $discordDisplayName) {
             // Locks the giveaway row so concurrent joins on the SAME
             // giveaway serialize here - this is what makes "one entry per
             // member" and "no item awarded twice" race-safe, not just the
             // unique constraint (which remains a defense-in-depth backstop).
             $locked = Giveaway::query()->lockForUpdate()->findOrFail($giveaway->id);
 
-            $member = $this->syncMember->execute($locked->guild, $discordUserId, $discordUsername);
+            $member = $this->syncMember->execute($locked->guild, $discordUserId, $discordUsername, displayName: $discordDisplayName);
 
             // Authoritative expiry check: independent of whether the
             // scheduled `giveaways:close-expired` job has flipped `status`

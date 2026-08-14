@@ -6,6 +6,7 @@ use App\Actions\Giveaways\CreateGiveawayAction;
 use App\Models\CollectionTheme;
 use App\Models\Giveaway;
 use App\Models\Guild;
+use App\Models\User;
 
 it('creates a giveaway in draft status', function () {
     $guild = Guild::factory()->create();
@@ -19,4 +20,24 @@ it('creates a giveaway in draft status', function () {
         ->and($giveaway->duration_minutes)->toBe(30)
         ->and($giveaway->starts_at)->toBeNull()
         ->and($giveaway->ends_at)->toBeNull();
+});
+
+it('records the creator when provided', function () {
+    $guild = Guild::factory()->create();
+    $theme = CollectionTheme::factory()->for($guild)->create();
+    $user = User::factory()->create();
+
+    $giveaway = (new CreateGiveawayAction)->execute($guild, $theme, '999888777', 30, createdBy: $user);
+
+    expect($giveaway->created_by_user_id)->toBe($user->id)
+        ->and($giveaway->creator->is($user))->toBeTrue();
+});
+
+it('leaves the creator null when not provided', function () {
+    $guild = Guild::factory()->create();
+    $theme = CollectionTheme::factory()->for($guild)->create();
+
+    $giveaway = (new CreateGiveawayAction)->execute($guild, $theme, '999888777', 30);
+
+    expect($giveaway->created_by_user_id)->toBeNull();
 });

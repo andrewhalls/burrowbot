@@ -64,6 +64,7 @@ class GiveawayIndex extends Component
     {
         $giveaways = $this->guild->giveaways()
             ->withCount('entries')
+            ->with('creator')
             ->orderByDesc('created_at')
             ->get();
 

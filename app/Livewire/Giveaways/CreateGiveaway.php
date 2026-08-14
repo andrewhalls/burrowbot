@@ -10,6 +10,7 @@ use App\Models\CollectionTheme;
 use App\Models\Guild;
 use Illuminate\Contracts\View\View;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Auth;
 use Livewire\Component;
 use Livewire\WithFileUploads;
 
@@ -83,6 +84,7 @@ class CreateGiveaway extends Component
             $scheduledStartAt,
             $validated['description'] !== '' ? $validated['description'] : null,
             $imagePath,
+            Auth::user(),
         );
 
         $this->dispatch('giveaway-created', giveawayId: $giveaway->id);

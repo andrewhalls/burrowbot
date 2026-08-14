@@ -32,6 +32,34 @@ it('changes an event status', function () {
     expect($event->fresh()->status)->toBe(Event::STATUS_PAUSED);
 });
 
+it('shows who created an event on its tile and in the summary panel', function () {
+    $guild = Guild::factory()->create();
+    $creator = User::factory()->create(['name' => 'Ada Admin']);
+    $event = Event::factory()->for($guild)->createdBy($creator)->create(['title' => 'Raid Night']);
+    $staff = actingEventStaffFor($guild);
+
+    Livewire::actingAs($staff)
+        ->test(EventIndex::class, ['guild' => $guild])
+        ->assertSee('Created by Ada Admin')
+        ->call('select', $event->id)
+        ->assertSee('Created by Ada Admin');
+});
+
+it('toggles into and out of the edit form for the selected event', function () {
+    $guild = Guild::factory()->create();
+    $event = Event::factory()->for($guild)->create();
+    $staff = actingEventStaffFor($guild);
+
+    Livewire::actingAs($staff)
+        ->test(EventIndex::class, ['guild' => $guild])
+        ->call('select', $event->id)
+        ->assertDontSeeLivewire('events.edit-event')
+        ->call('toggleEdit')
+        ->assertSeeLivewire('events.edit-event')
+        ->call('toggleEdit')
+        ->assertDontSeeLivewire('events.edit-event');
+});
+
 it('shows the event summary in the detail panel when a tile is selected', function () {
     $guild = Guild::factory()->create();
     $event = Event::factory()->for($guild)->create(['title' => 'Raid Night', 'description' => 'Weekly raid']);

@@ -6,6 +6,7 @@ namespace App\Actions\CollectionThemes;
 
 use App\Models\CollectionTheme;
 use App\Models\CollectionThemeItem;
+use Illuminate\Support\Facades\Storage;
 use InvalidArgumentException;
 
 /**
@@ -36,6 +37,34 @@ class ManageCollectionThemeItemsAction
         $this->ensureEditable($theme);
 
         $item->delete();
+    }
+
+    /**
+     * Sets or replaces the theme's own image (distinct from its items'
+     * images), deleting the previously stored file if there was one. Not
+     * subject to the active-giveaway lock - the theme's own image doesn't
+     * affect the prize pool.
+     */
+    public function setImage(CollectionTheme $theme, string $imagePath): void
+    {
+        $previousPath = $theme->image_path;
+
+        $theme->update(['image_path' => $imagePath]);
+
+        if ($previousPath && $previousPath !== $imagePath) {
+            Storage::disk('public')->delete($previousPath);
+        }
+    }
+
+    public function removeImage(CollectionTheme $theme): void
+    {
+        $previousPath = $theme->image_path;
+
+        $theme->update(['image_path' => null]);
+
+        if ($previousPath) {
+            Storage::disk('public')->delete($previousPath);
+        }
     }
 
     private function ensureEditable(CollectionTheme $theme): void

@@ -28,6 +28,7 @@ class StandardGiveaway extends Model
 
     protected $fillable = [
         'guild_id',
+        'created_by_user_id',
         'title',
         'description',
         'image_path',
@@ -68,6 +69,14 @@ class StandardGiveaway extends Model
     public function guild(): BelongsTo
     {
         return $this->belongsTo(Guild::class);
+    }
+
+    /**
+     * @return BelongsTo<User, $this>
+     */
+    public function creator(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'created_by_user_id');
     }
 
     /**

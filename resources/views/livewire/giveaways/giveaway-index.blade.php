@@ -42,6 +42,9 @@
                         @if ($giveaway->description)
                             <p class="text-xs text-muted mt-1 truncate">{{ $giveaway->description }}</p>
                         @endif
+                        @if ($giveaway->creator)
+                            <p class="text-xs text-muted mt-1 truncate">Created by {{ $giveaway->creator->name }}</p>
+                        @endif
                         @if ($giveaway->status === 'draft')
                             <div class="mt-auto pt-2">
                                 <button type="button" wire:click.stop="start({{ $giveaway->id }})" wire:confirm="Start this popup giveaway now?" class="text-xs text-success hover:text-success font-medium">

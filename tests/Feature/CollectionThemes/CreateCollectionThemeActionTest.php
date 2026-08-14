@@ -32,3 +32,19 @@ it('rejects a theme with zero non-blank items and creates nothing', function () 
 
     expect(CollectionTheme::query()->count())->toBe(0);
 });
+
+it('records the image path when provided', function () {
+    $guild = Guild::factory()->create();
+
+    $theme = (new CreateCollectionThemeAction)->execute($guild, 'Retro Arcade', ['Joystick'], 'theme-images/example.png');
+
+    expect($theme->image_path)->toBe('theme-images/example.png');
+});
+
+it('leaves the image path null when not provided', function () {
+    $guild = Guild::factory()->create();
+
+    $theme = (new CreateCollectionThemeAction)->execute($guild, 'Retro Arcade', ['Joystick']);
+
+    expect($theme->image_path)->toBeNull();
+});

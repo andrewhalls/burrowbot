@@ -21,6 +21,7 @@ class MemberController extends Controller
             $discordUserId,
             $request->string('username')->toString(),
             $request->string('avatar_url')->toString() ?: null,
+            $request->string('display_name')->toString() ?: null,
         );
 
         return response()->json($member);

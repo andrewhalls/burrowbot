@@ -22,15 +22,16 @@ class EventSignupController extends Controller
     ): JsonResponse {
         $discordUserId = $request->string('discord_user_id')->toString();
         $discordUsername = $request->string('discord_username')->toString();
+        $discordDisplayName = $request->string('discord_display_name')->toString() ?: null;
 
         if ($request->filled('event_role_id')) {
             $role = EventRole::query()
                 ->where('event_role_set_id', $occurrence->event_role_set_id)
                 ->findOrFail($request->integer('event_role_id'));
 
-            $result = $signUpForRole->execute($occurrence, $role, $discordUserId, $discordUsername);
+            $result = $signUpForRole->execute($occurrence, $role, $discordUserId, $discordUsername, $discordDisplayName);
         } else {
-            $result = $markNotAttending->execute($occurrence, $discordUserId, $discordUsername);
+            $result = $markNotAttending->execute($occurrence, $discordUserId, $discordUsername, $discordDisplayName);
         }
 
         return response()->json($result->toArray());

@@ -1,14 +1,28 @@
 <div class="space-y-4">
     <div class="flex items-center justify-between">
-        <h2 class="text-lg font-semibold text-ink">Entrants</h2>
+        <div>
+            <h2 class="text-lg font-semibold text-ink">Entrants</h2>
+            @if ($giveaway->creator)
+                <p class="text-xs text-muted">Created by {{ $giveaway->creator->name }}</p>
+            @endif
+        </div>
         @if ($giveaway->isDraft())
-            <button type="button" wire:click="start" wire:confirm="Start this popup giveaway now?"
-                    class="rounded-pill bg-accent hover:bg-accent-hover px-4 py-2 text-sm font-medium text-accent-ink">
-                Start popup giveaway
-            </button>
+            <div class="flex gap-2">
+                <button type="button" wire:click="toggleEdit"
+                        class="rounded-pill bg-surface-hover hover:bg-line px-4 py-2 text-sm font-medium text-ink">
+                    {{ $editing ? 'Cancel' : 'Edit' }}
+                </button>
+                <button type="button" wire:click="start" wire:confirm="Start this popup giveaway now?"
+                        class="rounded-pill bg-accent hover:bg-accent-hover px-4 py-2 text-sm font-medium text-accent-ink">
+                    Start popup giveaway
+                </button>
+            </div>
         @endif
     </div>
 
+    @if ($editing)
+        <livewire:giveaways.edit-giveaway :giveaway="$giveaway" :key="'edit-giveaway-'.$giveaway->id" />
+    @else
     <div class="flex flex-wrap gap-3">
         <input type="text" wire:model.live.debounce.300ms="search" placeholder="Search by member&hellip;"
                class="rounded-control bg-surface border border-line px-3 py-2 text-sm">
@@ -27,43 +41,54 @@
         </select>
     </div>
 
-    <table class="w-full text-sm">
-        <thead class="text-left text-muted">
-            <tr>
-                <th class="py-2">Member</th>
-                <th class="py-2">Item</th>
-                <th class="py-2">Entered</th>
-                <th class="py-2">Status</th>
-                <th class="py-2"></th>
-            </tr>
-        </thead>
-        <tbody class="divide-y divide-line">
-            @forelse ($entries as $entry)
-                <tr wire:key="entry-{{ $entry->id }}">
-                    <td class="py-2">{{ $entry->discordMember->username }}</td>
-                    <td class="py-2">{{ $entry->collectionThemeItem?->name ?? '—' }}</td>
-                    <td class="py-2">{{ $entry->created_at->diffForHumans() }}</td>
-                    <td class="py-2">
-                        @if ($entry->isFulfilled())
-                            <span class="text-success">Handed out{{ $entry->fulfilledBy ? ' by '.$entry->fulfilledBy->name : '' }}</span>
-                        @else
-                            <span class="text-muted">Pending</span>
-                        @endif
-                    </td>
-                    <td class="py-2 text-right">
-                        @unless ($entry->isFulfilled())
-                            <button type="button" wire:click="markFulfilled({{ $entry->id }})"
-                                    class="text-xs rounded-control bg-surface-hover hover:bg-surface-hover px-3 py-1.5">
-                                Mark handed out
-                            </button>
-                        @endunless
-                    </td>
+    <div class="rounded-card border border-line overflow-hidden">
+        <table class="w-full text-sm">
+            <thead class="text-left text-muted bg-surface-hover">
+                <tr>
+                    <th class="py-2 px-3 font-medium">Member</th>
+                    <th class="py-2 px-3 font-medium">Item</th>
+                    <th class="py-2 px-3 font-medium">Entered</th>
+                    <th class="py-2 px-3 font-medium">Status</th>
+                    <th class="py-2 px-3"></th>
                 </tr>
-            @empty
-                <tr><td colspan="5" class="py-6 text-center text-muted">No entrants match.</td></tr>
-            @endforelse
-        </tbody>
-    </table>
+            </thead>
+            <tbody class="divide-y divide-line">
+                @forelse ($entries as $entry)
+                    <tr wire:key="entry-{{ $entry->id }}" class="hover:bg-surface-hover transition-colors">
+                        <td class="py-2 px-3 text-ink">{{ $entry->discordMember->display_name_or_username }}</td>
+                        <td class="py-2 px-3">
+                            @if ($entry->collectionThemeItem)
+                                <span class="rounded-pill bg-accent/10 text-accent px-2 py-0.5 text-xs font-medium">{{ $entry->collectionThemeItem->name }}</span>
+                            @else
+                                <span class="text-muted">—</span>
+                            @endif
+                        </td>
+                        <td class="py-2 px-3 text-muted">{{ $entry->created_at->diffForHumans() }}</td>
+                        <td class="py-2 px-3">
+                            @if ($entry->isFulfilled())
+                                <span class="rounded-pill bg-success/15 text-success px-2 py-0.5 text-xs font-medium">
+                                    Handed out{{ $entry->fulfilledBy ? ' by '.$entry->fulfilledBy->name : '' }}
+                                </span>
+                            @else
+                                <span class="rounded-pill bg-warning/15 text-warning px-2 py-0.5 text-xs font-medium">Pending</span>
+                            @endif
+                        </td>
+                        <td class="py-2 px-3 text-right">
+                            @unless ($entry->isFulfilled())
+                                <button type="button" wire:click="markFulfilled({{ $entry->id }})"
+                                        class="text-xs rounded-control bg-surface-hover hover:bg-line px-3 py-1.5">
+                                    Mark handed out
+                                </button>
+                            @endunless
+                        </td>
+                    </tr>
+                @empty
+                    <tr><td colspan="5" class="py-6 text-center text-muted">No entrants match.</td></tr>
+                @endforelse
+            </tbody>
+        </table>
+    </div>
 
     {{ $entries->links() }}
+    @endif
 </div>

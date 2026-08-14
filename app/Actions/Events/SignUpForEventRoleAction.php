@@ -26,15 +26,15 @@ class SignUpForEventRoleAction
         private readonly PromoteFromWaitlistAction $promoteFromWaitlist,
     ) {}
 
-    public function execute(EventOccurrence $occurrence, EventRole $role, string $discordUserId, string $discordUsername): SignupResult
+    public function execute(EventOccurrence $occurrence, EventRole $role, string $discordUserId, string $discordUsername, ?string $discordDisplayName = null): SignupResult
     {
-        return DB::transaction(function () use ($occurrence, $role, $discordUserId, $discordUsername) {
+        return DB::transaction(function () use ($occurrence, $role, $discordUserId, $discordUsername, $discordDisplayName) {
             // Locks the occurrence row so concurrent signups on the SAME
             // occurrence serialize here - mirrors JoinGiveawayAction's
             // concurrency-safety approach (giveaway design.md §3).
             $locked = EventOccurrence::query()->lockForUpdate()->findOrFail($occurrence->id);
 
-            $member = $this->syncMember->execute($locked->event->guild, $discordUserId, $discordUsername);
+            $member = $this->syncMember->execute($locked->event->guild, $discordUserId, $discordUsername, displayName: $discordDisplayName);
 
             // Authoritative cutoff: independent of `status`.
             if ($locked->hasStarted()) {

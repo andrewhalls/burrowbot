@@ -47,4 +47,18 @@ describe('buildEventOccurrenceMessage', () => {
     expect(embedData.title).toContain('Raid Night')
     expect(embedData.description).toBe('Bring your best gear.')
   })
+
+  it('sets the embed image only when image_url is present', () => {
+    const message = buildEventOccurrenceMessage({ ...payload, image_url: 'https://example.test/event.png' })
+    const embedData = message.embeds[0].data
+
+    expect(embedData.image.url).toBe('https://example.test/event.png')
+  })
+
+  it('omits the embed image when image_url is absent', () => {
+    const message = buildEventOccurrenceMessage(payload)
+    const embedData = message.embeds[0].data
+
+    expect(embedData.image).toBeUndefined()
+  })
 })

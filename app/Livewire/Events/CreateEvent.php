@@ -12,18 +12,23 @@ use App\Models\Guild;
 use App\Support\Events\BuildRecurrenceRule;
 use Illuminate\Contracts\View\View;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Auth;
 use InvalidArgumentException;
 use Livewire\Component;
+use Livewire\WithFileUploads;
 
 class CreateEvent extends Component
 {
     use ResolvesBrowserTimezone;
+    use WithFileUploads;
 
     public Guild $guild;
 
     public string $title = '';
 
     public string $description = '';
+
+    public mixed $image = null;
 
     public string $channelId = '';
 
@@ -69,6 +74,7 @@ class CreateEvent extends Component
                 'exists:event_role_sets,id,guild_id,'.$this->guild->id,
             ],
             'postingMode' => ['required', 'in:'.Event::POSTING_MODE_THREAD.','.Event::POSTING_MODE_MESSAGE],
+            'image' => ['nullable', 'image', 'max:5120'],
             'startDate' => ['required', 'date'],
             'startTime' => ['required', 'date_format:H:i'],
             'recurrenceType' => ['required', 'in:none,daily,weekly,monthly'],
@@ -101,6 +107,8 @@ class CreateEvent extends Component
 
         $roleSet = EventRoleSet::query()->findOrFail($validated['eventRoleSetId']);
 
+        $imagePath = $this->image?->store('event-images', 'public');
+
         $event = $createEvent->execute(
             $this->guild,
             $roleSet,
@@ -111,6 +119,8 @@ class CreateEvent extends Component
             $recurrenceRule,
             $startAt,
             $this->resolvedTimezone(),
+            $imagePath,
+            Auth::user(),
         );
 
         $this->dispatch('event-created', eventId: $event->id);

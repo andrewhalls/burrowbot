@@ -39,6 +39,32 @@ it('updates the stored username when it changes on Discord', function () {
         ->and(DiscordMember::query()->where('guild_id', $guild->id)->count())->toBe(1);
 });
 
+it('records the display name when provided', function () {
+    $guild = Guild::factory()->create();
+
+    $this->withHeaders(botAuthHeader())
+        ->putJson("/internal/guilds/{$guild->discord_guild_id}/members/12345", [
+            'username' => 'newbie',
+            'display_name' => 'The Newbie',
+        ])
+        ->assertStatus(200)
+        ->assertJsonPath('display_name', 'The Newbie');
+
+    $member = DiscordMember::query()->where('guild_id', $guild->id)->where('discord_user_id', '12345')->sole();
+    expect($member->display_name)->toBe('The Newbie');
+});
+
+it('leaves the display name null when not provided', function () {
+    $guild = Guild::factory()->create();
+
+    $this->withHeaders(botAuthHeader())
+        ->putJson("/internal/guilds/{$guild->discord_guild_id}/members/12345", ['username' => 'newbie'])
+        ->assertStatus(200);
+
+    $member = DiscordMember::query()->where('guild_id', $guild->id)->where('discord_user_id', '12345')->sole();
+    expect($member->display_name)->toBeNull();
+});
+
 it('rejects member sync requests without a valid bot token', function () {
     $guild = Guild::factory()->create();
 

@@ -87,4 +87,47 @@ describe('createLaravelClient', () => {
       is_boosting: true,
     })
   })
+
+  it('includes the resolved display name when upserting a member', async () => {
+    const fetchImpl = fakeFetch({ id: 1 })
+    const client = createLaravelClient({ baseUrl: 'http://laravel.test', serviceToken: 't', fetchImpl })
+
+    await client.upsertMember('999', '111', 'entrant', 'https://cdn.discordapp.com/a.png', 'Entrant Display Name')
+
+    const [, options] = fetchImpl.mock.calls[0]
+    expect(JSON.parse(options.body)).toEqual({
+      username: 'entrant',
+      avatar_url: 'https://cdn.discordapp.com/a.png',
+      display_name: 'Entrant Display Name',
+    })
+  })
+
+  it('includes the resolved display name when joining a giveaway', async () => {
+    const fetchImpl = fakeFetch({ status: 'won' })
+    const client = createLaravelClient({ baseUrl: 'http://laravel.test', serviceToken: 't', fetchImpl })
+
+    await client.joinGiveaway(7, '111', 'entrant', 'Entrant Display Name')
+
+    const [, options] = fetchImpl.mock.calls[0]
+    expect(JSON.parse(options.body)).toEqual({
+      discord_user_id: '111',
+      discord_username: 'entrant',
+      discord_display_name: 'Entrant Display Name',
+    })
+  })
+
+  it('includes the resolved display name when signing up for an event occurrence', async () => {
+    const fetchImpl = fakeFetch({ status: 'confirmed' })
+    const client = createLaravelClient({ baseUrl: 'http://laravel.test', serviceToken: 't', fetchImpl })
+
+    await client.signUpForEventOccurrence(7, '111', 'entrant', '42', 'Entrant Display Name')
+
+    const [, options] = fetchImpl.mock.calls[0]
+    expect(JSON.parse(options.body)).toEqual({
+      discord_user_id: '111',
+      discord_username: 'entrant',
+      discord_display_name: 'Entrant Display Name',
+      event_role_id: '42',
+    })
+  })
 })

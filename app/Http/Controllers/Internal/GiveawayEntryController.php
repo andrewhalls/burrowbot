@@ -18,6 +18,7 @@ class GiveawayEntryController extends Controller
             $giveaway,
             $request->string('discord_user_id')->toString(),
             $request->string('discord_username')->toString(),
+            $request->string('discord_display_name')->toString() ?: null,
         );
 
         return response()->json($result->toArray());

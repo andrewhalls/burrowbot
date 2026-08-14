@@ -15,19 +15,19 @@
                     </span>
                 </h3>
 
-                <ul class="space-y-1 text-sm mb-2">
+                <ul class="divide-y divide-line text-sm mb-2">
                     @forelse ($entry['confirmed'] as $signup)
-                        <li>{{ $signup->discordMember->username }}</li>
+                        <li class="py-1.5 text-ink">{{ $signup->discordMember->display_name_or_username }}</li>
                     @empty
-                        <li class="text-muted">No one yet.</li>
+                        <li class="py-1.5 text-muted">No one yet.</li>
                     @endforelse
                 </ul>
 
                 @if ($entry['waitlisted']->isNotEmpty())
-                    <p class="text-xs text-warning mb-1">Waitlist</p>
-                    <ul class="space-y-1 text-sm text-muted">
+                    <p class="text-xs text-warning font-medium mb-1">Waitlist</p>
+                    <ul class="space-y-1">
                         @foreach ($entry['waitlisted'] as $signup)
-                            <li>{{ $signup->discordMember->username }}</li>
+                            <li><span class="rounded-pill bg-warning/15 text-warning px-2 py-0.5 text-xs">{{ $signup->discordMember->display_name_or_username }}</span></li>
                         @endforeach
                     </ul>
                 @endif
@@ -37,11 +37,11 @@
 
     <div class="rounded-card border border-line p-4">
         <h3 class="font-medium mb-2">Not attending</h3>
-        <ul class="space-y-1 text-sm">
+        <ul class="divide-y divide-line text-sm">
             @forelse ($notAttending as $attendance)
-                <li>{{ $attendance->discordMember->username }}</li>
+                <li class="py-1.5 text-muted">{{ $attendance->discordMember->display_name_or_username }}</li>
             @empty
-                <li class="text-muted">No one has said they can't make it.</li>
+                <li class="py-1.5 text-muted">No one has said they can't make it.</li>
             @endforelse
         </ul>
     </div>

@@ -8,6 +8,7 @@ use App\Models\CollectionThemeItem;
 use App\Models\Guild;
 use App\Models\StandardGiveaway;
 use App\Models\StandardGiveawayOccurrence;
+use App\Models\User;
 use Illuminate\Support\Facades\DB;
 use InvalidArgumentException;
 
@@ -41,6 +42,7 @@ class CreateStandardGiveawayAction
         ?\DateTimeInterface $scheduledPostAt,
         ?string $recurrenceTimezone,
         ?string $imagePath = null,
+        ?User $createdBy = null,
     ): StandardGiveaway {
         $prizeCollectionThemeItemIds = array_values(array_unique($prizeCollectionThemeItemIds));
 
@@ -60,9 +62,10 @@ class CreateStandardGiveawayAction
         return DB::transaction(function () use (
             $guild, $title, $description, $channelId, $postingMode, $winnerCount,
             $requiresBooster, $durationMinutes, $prizeCollectionThemeItemIds,
-            $requiredDiscordRoleIds, $recurrenceRule, $scheduledPostAt, $recurrenceTimezone, $imagePath,
+            $requiredDiscordRoleIds, $recurrenceRule, $scheduledPostAt, $recurrenceTimezone, $imagePath, $createdBy,
         ) {
             $giveaway = $guild->standardGiveaways()->create([
+                'created_by_user_id' => $createdBy?->id,
                 'title' => $title,
                 'description' => $description,
                 'image_path' => $imagePath,

@@ -13,7 +13,14 @@ export const EVENT_NOT_ATTENDING_PREFIX = 'event-not-attending:'
  * resolve correctly even after a bot restart - Discord persists customId
  * on components indefinitely.
  */
-export function buildEventOccurrenceMessage({ occurrence_id: occurrenceId, title, description, scheduled_start_at: scheduledStartAt, roles }) {
+export function buildEventOccurrenceMessage({
+  occurrence_id: occurrenceId,
+  title,
+  description,
+  image_url: imageUrl,
+  scheduled_start_at: scheduledStartAt,
+  roles,
+}) {
   const embed = new EmbedBuilder()
     .setTitle(`📅 ${title}`)
     .setDescription(description)
@@ -22,6 +29,8 @@ export function buildEventOccurrenceMessage({ occurrence_id: occurrenceId, title
       value: `<t:${Math.floor(new Date(scheduledStartAt).getTime() / 1000)}:F>`,
     })
     .setColor(0x5865f2)
+
+  if (imageUrl) embed.setImage(imageUrl)
 
   const roleSelect = new StringSelectMenuBuilder()
     .setCustomId(`${EVENT_ROLE_SELECT_PREFIX}${occurrenceId}`)

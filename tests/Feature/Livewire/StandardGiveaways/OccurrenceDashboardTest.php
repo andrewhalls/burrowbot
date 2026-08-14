@@ -5,6 +5,7 @@ declare(strict_types=1);
 use App\Livewire\StandardGiveaways\OccurrenceDashboard;
 use App\Models\CollectionThemeItem;
 use App\Models\DiscordMember;
+use App\Models\StandardGiveaway;
 use App\Models\StandardGiveawayEntry;
 use App\Models\StandardGiveawayOccurrence;
 use App\Models\StandardGiveawayWinner;
@@ -31,6 +32,17 @@ function occurrenceWithEntriesAndWinners(): array
 
     return compact('occurrence', 'winnerMember', 'entrantMember', 'winner', 'item');
 }
+
+it('shows who created the standard giveaway when known', function () {
+    $creator = User::factory()->create(['name' => 'Ada Admin']);
+    $giveaway = StandardGiveaway::factory()->createdBy($creator)->create();
+    $occurrence = StandardGiveawayOccurrence::factory()->for($giveaway, 'standardGiveaway')->posted()->create();
+    $staff = actingEventStaffFor($giveaway->guild);
+
+    Livewire::actingAs($staff)
+        ->test(OccurrenceDashboard::class, ['occurrence' => $occurrence])
+        ->assertSee('Created by Ada Admin');
+});
 
 it('shows entrants and drawn winners with their prize item', function () {
     ['occurrence' => $occurrence, 'winnerMember' => $winnerMember, 'entrantMember' => $entrantMember, 'item' => $item] = occurrenceWithEntriesAndWinners();

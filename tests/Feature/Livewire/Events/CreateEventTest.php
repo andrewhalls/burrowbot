@@ -9,6 +9,8 @@ use App\Models\EventRoleSet;
 use App\Models\Guild;
 use App\Models\GuildAdmin;
 use App\Models\User;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Storage;
 use Livewire\Livewire;
 
 it('shows the channel picker scoped to this guild, not another guild\'s channels', function () {
@@ -31,6 +33,52 @@ it('shows an empty (not broken) channel picker when the guild has no synced chan
     Livewire::actingAs($staff)
         ->test(CreateEvent::class, ['guild' => $guild])
         ->assertSee('No synced channels yet.');
+});
+
+it('creates an event with an image', function () {
+    Storage::fake('public');
+
+    $guild = Guild::factory()->create();
+    $roleSet = EventRoleSet::factory()->for($guild)->withRoles(1)->create();
+    $staff = actingEventStaffFor($guild);
+    $future = now()->addWeek();
+
+    Livewire::actingAs($staff)
+        ->test(CreateEvent::class, ['guild' => $guild])
+        ->set('title', 'Game Night')
+        ->set('description', 'desc')
+        ->set('channelId', '123456')
+        ->set('eventRoleSetId', $roleSet->id)
+        ->set('startDate', $future->toDateString())
+        ->set('startTime', '20:00')
+        ->set('image', UploadedFile::fake()->image('event.jpg'))
+        ->call('save')
+        ->assertHasNoErrors();
+
+    $event = Event::query()->where('title', 'Game Night')->sole();
+    expect($event->image_path)->not->toBeNull();
+    Storage::disk('public')->assertExists($event->image_path);
+});
+
+it('records the authenticated admin as the creator', function () {
+    $guild = Guild::factory()->create();
+    $roleSet = EventRoleSet::factory()->for($guild)->withRoles(1)->create();
+    $staff = actingEventStaffFor($guild);
+    $future = now()->addWeek();
+
+    Livewire::actingAs($staff)
+        ->test(CreateEvent::class, ['guild' => $guild])
+        ->set('title', 'Game Night')
+        ->set('description', 'desc')
+        ->set('channelId', '123456')
+        ->set('eventRoleSetId', $roleSet->id)
+        ->set('startDate', $future->toDateString())
+        ->set('startTime', '20:00')
+        ->call('save')
+        ->assertHasNoErrors();
+
+    $event = Event::query()->where('title', 'Game Night')->sole();
+    expect($event->created_by_user_id)->toBe($staff->id);
 });
 
 it('records the browser timezone alongside the wall-clock start time, unconverted', function () {

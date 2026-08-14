@@ -22,11 +22,33 @@ class ManageCollectionThemeItems extends Component
 
     public mixed $newItemImage = null;
 
+    public mixed $themeImage = null;
+
     public function mount(CollectionTheme $theme): void
     {
         $this->authorize('manage', $theme);
 
         $this->theme = $theme;
+    }
+
+    public function saveThemeImage(ManageCollectionThemeItemsAction $manageItems): void
+    {
+        $this->authorize('manage', $this->theme);
+
+        $this->validate(['themeImage' => ['required', 'image', 'max:5120']]);
+
+        $imagePath = $this->themeImage->store('theme-images', 'public');
+
+        $manageItems->setImage($this->theme, $imagePath);
+
+        $this->reset('themeImage');
+    }
+
+    public function removeThemeImage(ManageCollectionThemeItemsAction $manageItems): void
+    {
+        $this->authorize('manage', $this->theme);
+
+        $manageItems->removeImage($this->theme);
     }
 
     public function addItem(ManageCollectionThemeItemsAction $manageItems): void

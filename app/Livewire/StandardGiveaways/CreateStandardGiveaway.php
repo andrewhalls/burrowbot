@@ -14,6 +14,7 @@ use App\Models\StandardGiveaway;
 use App\Support\Events\BuildRecurrenceRule;
 use Illuminate\Contracts\View\View;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Auth;
 use InvalidArgumentException;
 use Livewire\Component;
 use Livewire\WithFileUploads;
@@ -224,6 +225,7 @@ class CreateStandardGiveaway extends Component
                 $startAt,
                 $this->resolvedTimezone(),
                 $imagePath,
+                Auth::user(),
             );
         } catch (InvalidArgumentException $e) {
             $this->addError('selectedPrizeItemIds', $e->getMessage());

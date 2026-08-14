@@ -18,6 +18,7 @@ class JoinGiveawayRequest extends FormRequest
         return [
             'discord_user_id' => ['required', 'string'],
             'discord_username' => ['required', 'string', 'max:255'],
+            'discord_display_name' => ['sometimes', 'nullable', 'string', 'max:255'],
         ];
     }
 }

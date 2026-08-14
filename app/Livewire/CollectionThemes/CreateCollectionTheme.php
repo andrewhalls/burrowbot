@@ -9,15 +9,20 @@ use App\Models\Guild;
 use Illuminate\Contracts\View\View;
 use InvalidArgumentException;
 use Livewire\Component;
+use Livewire\WithFileUploads;
 
 class CreateCollectionTheme extends Component
 {
+    use WithFileUploads;
+
     public Guild $guild;
 
     public string $name = '';
 
     /** @var list<string> */
     public array $items = ['', ''];
+
+    public mixed $image = null;
 
     public function mount(Guild $guild): void
     {
@@ -44,17 +49,20 @@ class CreateCollectionTheme extends Component
         $this->validate([
             'name' => ['required', 'string', 'max:255'],
             'items' => ['array'],
+            'image' => ['nullable', 'image', 'max:5120'],
         ]);
 
+        $imagePath = $this->image?->store('theme-images', 'public');
+
         try {
-            $createTheme->execute($this->guild, $this->name, $this->items);
+            $createTheme->execute($this->guild, $this->name, $this->items, $imagePath);
         } catch (InvalidArgumentException) {
             $this->addError('items', 'A theme must have at least one item.');
 
             return;
         }
 
-        $this->reset(['name', 'items']);
+        $this->reset(['name', 'items', 'image']);
         $this->items = ['', ''];
 
         $this->dispatch('collection-theme-created');

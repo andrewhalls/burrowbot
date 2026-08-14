@@ -96,3 +96,39 @@ document.addEventListener('DOMContentLoaded', () => applyBrowserLocalTime(docume
 document.addEventListener('livewire:init', () => {
     Livewire.hook('morph.updated', ({ el }) => applyBrowserLocalTime(el))
 })
+
+// Livewire uploads a selected file to a dedicated endpoint immediately on
+// selection, before any of our own `max:5120` validation ever runs - if
+// that raw upload exceeds the server's own upload_max_filesize/
+// post_max_size (php.ini) or a reverse proxy's body-size limit, it fails
+// with a generic "too large" error with no useful message, since the
+// request never reaches Laravel's validation layer at all. Checking the
+// file size client-side, before ever attempting the upload, catches the
+// common case with an actual explanation instead - though the ceiling
+// here can only ever be an approximation of ours (5MB, matching every
+// image field's `max:5120` rule); if the real server limit is lower than
+// that, only a server-config change (not app code) can raise it.
+const MAX_IMAGE_UPLOAD_BYTES = 5 * 1024 * 1024
+
+document.addEventListener(
+    'change',
+    (event) => {
+        const input = event.target
+        if (input.tagName !== 'INPUT' || input.type !== 'file' || !input.hasAttribute('wire:model')) return
+
+        const existingError = input.parentElement.querySelector('[data-file-size-error]')
+        existingError?.remove()
+
+        const file = input.files?.[0]
+        if (!file || file.size <= MAX_IMAGE_UPLOAD_BYTES) return
+
+        input.value = ''
+
+        const message = document.createElement('p')
+        message.dataset.fileSizeError = ''
+        message.className = 'text-danger text-xs mt-1'
+        message.textContent = `That file is too large (${(file.size / (1024 * 1024)).toFixed(1)}MB) - please choose one under 5MB.`
+        input.insertAdjacentElement('afterend', message)
+    },
+    true,
+)

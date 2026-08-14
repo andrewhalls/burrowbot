@@ -27,6 +27,8 @@ class EventIndex extends Component
      */
     public ?int $selectedOccurrenceId = null;
 
+    public bool $editing = false;
+
     public function mount(Guild $guild): void
     {
         $this->authorize('view', $guild);
@@ -38,6 +40,12 @@ class EventIndex extends Component
     public function closeCreateForm(): void
     {
         $this->showCreateForm = false;
+    }
+
+    #[On('event-updated')]
+    public function closeEditForm(): void
+    {
+        $this->editing = false;
     }
 
     public function setStatus(int $eventId, string $status, UpdateEventStatusAction $updateStatus): void
@@ -55,12 +63,23 @@ class EventIndex extends Component
 
         $this->selectedId = $exists ? $eventId : null;
         $this->selectedOccurrenceId = null;
+        $this->editing = false;
     }
 
     public function deselect(): void
     {
         $this->selectedId = null;
         $this->selectedOccurrenceId = null;
+        $this->editing = false;
+    }
+
+    public function toggleEdit(): void
+    {
+        $event = Event::query()->where('guild_id', $this->guild->id)->findOrFail($this->selectedId);
+
+        $this->authorize('manage', $event);
+
+        $this->editing = ! $this->editing;
     }
 
     public function selectOccurrence(int $occurrenceId): void
@@ -78,13 +97,13 @@ class EventIndex extends Component
     public function render(): View
     {
         $events = $this->guild->events()
-            ->with('eventRoleSet')
+            ->with(['eventRoleSet', 'creator'])
             ->orderByDesc('created_at')
             ->get();
 
         $selectedEvent = $this->selectedId
             ? Event::query()
-                ->with(['eventRoleSet', 'occurrences' => fn ($query) => $query->orderByDesc('scheduled_start_at')->limit(5)])
+                ->with(['eventRoleSet', 'creator', 'occurrences' => fn ($query) => $query->orderByDesc('scheduled_start_at')->limit(5)])
                 ->find($this->selectedId)
             : null;
 

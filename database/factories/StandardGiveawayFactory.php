@@ -6,6 +6,7 @@ namespace Database\Factories;
 
 use App\Models\Guild;
 use App\Models\StandardGiveaway;
+use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
@@ -41,6 +42,11 @@ class StandardGiveawayFactory extends Factory
     public function withImage(string $path): static
     {
         return $this->state(['image_path' => $path]);
+    }
+
+    public function createdBy(User $user): static
+    {
+        return $this->state(['created_by_user_id' => $user->id]);
     }
 
     public function boosterOnly(): static

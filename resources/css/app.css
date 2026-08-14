@@ -61,6 +61,21 @@
 }
 
 /**
+ * Without this, browsers render native form chrome (date/time picker
+ * pop-ups, the calendar icon, scrollbars) using light-mode colors
+ * regardless of our own theme - on a dark page that shows as low/zero
+ * contrast (e.g. white-on-white). This tells the browser which palette to
+ * actually use for that native chrome, independent of our own CSS colors.
+ */
+:root {
+    color-scheme: dark;
+}
+
+:root[data-theme='light'] {
+    color-scheme: light;
+}
+
+/**
  * Soft-shadow elevation on cards (design.md Decision 5) - applied globally
  * here rather than repeated per-utility-class across every view, so every
  * `rounded-card` element gets it automatically. Subtle in dark mode (where

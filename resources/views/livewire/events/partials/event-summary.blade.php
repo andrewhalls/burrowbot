@@ -6,6 +6,9 @@
 <div class="rounded-card border border-line p-4 space-y-4">
     <div>
         <h3 class="text-lg font-semibold text-ink">{{ $event->title }}</h3>
+        @if ($event->creator)
+            <p class="text-xs text-muted mt-1">Created by {{ $event->creator->name }}</p>
+        @endif
         @if ($event->description)
             <p class="text-sm text-muted mt-1">{{ $event->description }}</p>
         @endif

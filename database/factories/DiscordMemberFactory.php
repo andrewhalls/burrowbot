@@ -24,4 +24,9 @@ class DiscordMemberFactory extends Factory
             'avatar_url' => fake()->imageUrl(),
         ];
     }
+
+    public function withDisplayName(?string $displayName = null): static
+    {
+        return $this->state(fn () => ['display_name' => $displayName ?? fake()->firstName()]);
+    }
 }
