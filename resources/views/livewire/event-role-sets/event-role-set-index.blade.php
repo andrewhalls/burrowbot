@@ -12,7 +12,7 @@
 
     <x-list-detail-shell :selected="$selectedRoleSet !== null">
         <x-slot:list>
-            <div class="grid grid-cols-2 gap-3">
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 @forelse ($roleSets as $roleSet)
                     <div wire:key="role-set-tile-{{ $roleSet->id }}" wire:click="select({{ $roleSet->id }})"
                          @class([

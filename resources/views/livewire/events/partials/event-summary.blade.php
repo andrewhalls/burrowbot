@@ -18,7 +18,7 @@
         @endif
     </div>
 
-    <dl class="grid grid-cols-2 gap-3 text-sm">
+    <dl class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
         <div>
             <dt class="text-xs text-muted">Role set</dt>
             <dd class="text-ink">{{ $event->eventRoleSet->name }}</dd>

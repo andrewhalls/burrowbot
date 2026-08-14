@@ -12,16 +12,21 @@
 
 /**
  * Design tokens for the dashboard shell (openspec/specs/dashboard-theme).
- * The palette is modeled directly on the user-supplied light reference
- * screenshot: a soft cool-gray canvas, white cards, near-black ink, and a
- * monochrome near-black accent (not a saturated blue/indigo) for primary
- * actions and the active nav state - color is reserved for status accents
- * (success/warning) the way the reference uses its green/orange cards.
- * Dark mode is a derived version of this SAME theme (not a separate
- * reference), keeping the same monochrome-accent language by inverting it
- * to near-white on dark surfaces. Dark is still the unconditioned default
- * per spec (`dashboard-theme` - Default theme) - values here are dark
- * values, `:root[data-theme="light"]` below overrides them.
+ * Canvas/card/ink values are the original soft cool-gray (dark) / white
+ * (light) neutrals; the accent is a warm amber/terracotta (cozy-game
+ * direction, chosen over the original monochrome near-black/near-white
+ * accent - openspec/changes/archive/*-improve-dashboard-accessibility-
+ * and-warmth) used for primary actions, links, and the active nav state.
+ * Status colors (success/warning/danger) are unchanged.
+ *
+ * Each mode inverts which end of the accent is "bright": dark mode pairs
+ * a bright amber accent with deep-brown ink (bright color pops on a dark
+ * page, dark text reads on the bright fill); light mode pairs a deep
+ * terracotta accent with warm off-white ink (dark enough to double as
+ * standalone link/text color on a white page, light text reads on the
+ * dark fill). This mirrors the original scheme's light/dark inversion,
+ * just recolored - see design.md for the contrast ratios behind each
+ * value (all combinations verified >=4.5:1, WCAG AA).
  */
 @theme {
     --font-sans: 'Instrument Sans', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji',
@@ -33,9 +38,9 @@
     --color-line: #2b2d33;
     --color-ink: #f2f2f4;
     --color-muted: #97999f;
-    --color-accent: #f2f2f4;
-    --color-accent-hover: #d8d9dc;
-    --color-accent-ink: #17181b;
+    --color-accent: #e8a548;
+    --color-accent-hover: #f2b968;
+    --color-accent-ink: #241505;
     --color-danger: #f87171;
     --color-success: #4ade80;
     --color-warning: #fb923c;
@@ -52,9 +57,9 @@
     --color-line: #e9eaed;
     --color-ink: #15161a;
     --color-muted: #8b8e96;
-    --color-accent: #17181b;
-    --color-accent-hover: #2e2f34;
-    --color-accent-ink: #ffffff;
+    --color-accent: #b3591c;
+    --color-accent-hover: #954a17;
+    --color-accent-ink: #fff8f0;
     --color-danger: #dc2626;
     --color-success: #2f8f4e;
     --color-warning: #ea7317;
@@ -73,6 +78,28 @@
 
 :root[data-theme='light'] {
     color-scheme: light;
+}
+
+/**
+ * Visible keyboard focus (openspec specs/dashboard-style-guide - "Keyboard
+ * focus is visible"). Nothing in this app styled :focus before this, so
+ * keyboard/switch users had no reliable way to see where they were -
+ * :focus-visible (not a blanket :focus) so mouse/touch clicks stay
+ * ring-free and only actual keyboard navigation shows it. Applied to any
+ * element that can natively receive focus, rather than per-component, so
+ * new interactive elements get it automatically.
+ */
+@layer base {
+    a:focus-visible,
+    button:focus-visible,
+    input:focus-visible,
+    select:focus-visible,
+    textarea:focus-visible,
+    [tabindex]:focus-visible {
+        outline: 2px solid var(--color-accent);
+        outline-offset: 2px;
+        border-radius: 2px;
+    }
 }
 
 /**

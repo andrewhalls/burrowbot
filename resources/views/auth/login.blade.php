@@ -8,7 +8,7 @@
         @endif
 
         <a href="{{ route('auth.discord.redirect') }}"
-           class="inline-flex items-center justify-center gap-2 w-full rounded-card bg-accent px-4 py-2.5 font-medium hover:bg-accent-hover transition">
+           class="inline-flex items-center justify-center gap-2 w-full rounded-card bg-accent text-accent-ink px-4 py-2.5 font-medium hover:bg-accent-hover transition">
             Sign in with Discord
         </a>
     </div>

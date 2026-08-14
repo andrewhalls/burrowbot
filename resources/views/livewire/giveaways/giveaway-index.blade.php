@@ -12,7 +12,7 @@
 
     <x-list-detail-shell :selected="$selectedGiveaway !== null">
         <x-slot:list>
-            <div class="grid grid-cols-2 gap-3">
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 @forelse ($giveaways as $giveaway)
                     <div wire:key="giveaway-tile-{{ $giveaway->id }}" wire:click="select({{ $giveaway->id }})"
                          @class([

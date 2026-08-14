@@ -27,6 +27,10 @@
     @livewireStyles
 </head>
 <body class="min-h-screen bg-canvas text-ink antialiased">
+    <a href="#main-content"
+       class="sr-only focus:not-sr-only focus:fixed focus:top-3 focus:left-3 focus:z-50 focus:rounded-control focus:bg-accent focus:text-accent-ink focus:px-4 focus:py-2 focus:text-sm focus:font-medium">
+        Skip to content
+    </a>
     @auth
         @php
             // request()->route('guild') is only ever a resolved Guild
@@ -47,13 +51,13 @@
             <div class="flex-1 flex flex-col min-w-0">
                 <x-dashboard-topbar :guild="$currentGuild" :administered-guilds="$administeredGuilds" />
 
-                <main class="flex-1 overflow-y-auto p-6">
+                <main id="main-content" class="flex-1 overflow-y-auto p-4 sm:p-6">
                     {{ $slot }}
                 </main>
             </div>
         </div>
     @else
-        <div class="min-h-screen flex flex-col">
+        <div id="main-content" class="min-h-screen flex flex-col">
             {{ $slot }}
         </div>
     @endauth

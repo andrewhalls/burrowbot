@@ -13,7 +13,7 @@
         @error('description') <p class="text-danger text-xs mt-1">{{ $message }}</p> @enderror
     </div>
 
-    <div class="grid grid-cols-2 gap-3">
+    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <x-channel-picker :guild="$guild" model="channelId" :value="$channelId" />
         <div>
             <label class="block text-sm text-muted mb-1">Role set</label>
@@ -44,7 +44,7 @@
         </select>
     </div>
 
-    <div class="grid grid-cols-2 gap-3">
+    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <div>
             <label class="block text-sm text-muted mb-1">Start date</label>
             <input type="date" wire:model="startDate" class="w-full rounded-control bg-surface border border-line px-3 py-2 text-sm">
@@ -69,7 +69,7 @@
     </div>
 
     @if ($recurrenceType !== 'none')
-        <div class="grid grid-cols-2 gap-3">
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
                 <label class="block text-sm text-muted mb-1">Every</label>
                 <input type="number" min="1" wire:model="recurrenceInterval" class="w-full rounded-control bg-surface border border-line px-3 py-2 text-sm">

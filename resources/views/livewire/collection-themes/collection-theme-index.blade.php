@@ -12,7 +12,7 @@
 
     <x-list-detail-shell :selected="$selectedTheme !== null">
         <x-slot:list>
-            <div class="grid grid-cols-2 gap-3">
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 @forelse ($themes as $theme)
                     <div wire:key="theme-tile-{{ $theme->id }}" wire:click="select({{ $theme->id }})"
                          @class([
