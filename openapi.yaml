@@ -724,9 +724,11 @@ components:
             required_role_ids, and prize_item_names. For
             announce_standard_giveaway_winners: occurrence_id, channel_id,
             discord_thread_id/discord_message_id to reply in, and a
-            `winners` array of { discord_user_id, username, item_id,
-            item_name, item_image_url } (item_image_url omitted if that
-            winner's item has no image).
+            `winners` array of { discord_user_id, display_name, item_id,
+            item_name, item_image_url } (display_name is the member's
+            resolved Discord display name, falling back to username if
+            none is recorded; item_image_url omitted if that winner's
+            item has no image).
           additionalProperties: true
 
     StandardGiveawayEntryResult:

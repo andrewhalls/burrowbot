@@ -65,8 +65,8 @@ describe('createDiscordAdapter - announceStandardGiveawayWinners', () => {
     const { client, channel } = fakeClientWithChannel()
     const adapter = createDiscordAdapter(client)
     const winners = [
-      { discord_user_id: '1', username: 'Alice', item_id: 10, item_name: 'Joystick', item_image_url: 'https://example.test/joystick.png' },
-      { discord_user_id: '2', username: 'Bob', item_id: 11, item_name: 'Cartridge', item_image_url: null },
+      { discord_user_id: '1', display_name: 'Alice', item_id: 10, item_name: 'Joystick', item_image_url: 'https://example.test/joystick.png' },
+      { discord_user_id: '2', display_name: 'Bob', item_id: 11, item_name: 'Cartridge', item_image_url: null },
     ]
 
     await adapter.announceStandardGiveawayWinners({ channel_id: '123', discord_thread_id: null, winners })
@@ -95,7 +95,7 @@ describe('createDiscordAdapter - announceStandardGiveawayWinners', () => {
     const adapter = createDiscordAdapter(client)
     const winners = Array.from({ length: 11 }, (_, i) => ({
       discord_user_id: `${i}`,
-      username: `Winner${i}`,
+      display_name: `Winner${i}`,
       item_id: i,
       item_name: `Item${i}`,
       item_image_url: null,

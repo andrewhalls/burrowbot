@@ -90,7 +90,7 @@ export function createDiscordAdapter(client) {
       if (winners.length > 0 && winners.length <= 10) {
         const embeds = winners.map((winner) => {
           const embed = new EmbedBuilder()
-            .setTitle(`🎉 ${winner.username} won!`)
+            .setTitle(`🎉 ${winner.display_name} won!`)
             .setDescription(`**${winner.item_name}**`)
             .setColor(0x57f287)
 

@@ -85,7 +85,7 @@ it('enqueues an announce-winners outbound action naming each winner and their it
         'winner_count' => 1,
         'prize_item_ids' => [$item->id],
     ]);
-    $member = DiscordMember::factory()->create(['username' => 'LuckyWinner']);
+    $member = DiscordMember::factory()->create(['username' => 'LuckyWinner', 'display_name' => 'Lucky Winner']);
     StandardGiveawayEntry::factory()->for($occurrence, 'standardGiveawayOccurrence')->for($member, 'discordMember')->create();
 
     closeAndDrawAction()->execute($occurrence);
@@ -96,8 +96,28 @@ it('enqueues an announce-winners outbound action naming each winner and their it
         ->first();
 
     expect($action)->not->toBeNull()
-        ->and($action->payload['winners'][0]['username'])->toBe('LuckyWinner')
+        ->and($action->payload['winners'][0]['display_name'])->toBe('Lucky Winner')
         ->and($action->payload['winners'][0]['item_name'])->toBe($item->name);
+});
+
+it('falls back to username in the announce-winners payload when no display name is recorded', function () {
+    $theme = CollectionTheme::factory()->withItems(1)->create();
+    $item = $theme->items->first();
+    $occurrence = StandardGiveawayOccurrence::factory()->ended()->create([
+        'winner_count' => 1,
+        'prize_item_ids' => [$item->id],
+    ]);
+    $member = DiscordMember::factory()->create(['username' => 'LuckyWinner', 'display_name' => null]);
+    StandardGiveawayEntry::factory()->for($occurrence, 'standardGiveawayOccurrence')->for($member, 'discordMember')->create();
+
+    closeAndDrawAction()->execute($occurrence);
+
+    $action = DiscordOutboundAction::query()
+        ->where('standard_giveaway_occurrence_id', $occurrence->id)
+        ->where('type', DiscordOutboundAction::TYPE_ANNOUNCE_STANDARD_GIVEAWAY_WINNERS)
+        ->first();
+
+    expect($action->payload['winners'][0]['display_name'])->toBe('LuckyWinner');
 });
 
 it('includes the won item\'s image url in the outbound payload when it has one', function () {

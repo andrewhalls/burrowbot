@@ -71,7 +71,7 @@ class CloseAndDrawStandardGiveawayOccurrenceAction
 
                 $announcedWinners[] = [
                     'discord_user_id' => $member->discord_user_id,
-                    'username' => $member->username,
+                    'display_name' => $member->display_name_or_username,
                     'item_id' => $itemId,
                     'item_name' => $items->get($itemId)?->name,
                     'item_image_url' => $items->get($itemId)?->image_url,

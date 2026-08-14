@@ -7,11 +7,11 @@ Gives guild staff a screen, per giveaway, to search and filter entrants by membe
 ## Requirements
 
 ### Requirement: Entrant list for a giveaway
-The system SHALL display, for a single giveaway, every entrant with their Discord username, assigned item, entry timestamp, and fulfilment status.
+The system SHALL display, for a single giveaway, every entrant with their Discord display name (per `member-directory`, falling back to username if none is recorded), assigned item, entry timestamp, and fulfilment status.
 
 #### Scenario: Viewing a giveaway's entrants
 - **WHEN** an authorized staff member opens a giveaway's dashboard screen
-- **THEN** the system shows all entries for that giveaway only, each with the entrant's username, assigned item, entry time, and whether it has been marked fulfilled
+- **THEN** the system shows all entries for that giveaway only, each with the entrant's display name, assigned item, entry time, and whether it has been marked fulfilled
 
 ### Requirement: Search entrants by member
 The system SHALL let staff filter the entrant list by typing part of a member's username or Discord ID.
