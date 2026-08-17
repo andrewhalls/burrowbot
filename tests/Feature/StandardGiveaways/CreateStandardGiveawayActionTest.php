@@ -134,6 +134,26 @@ it('leaves banner image and claim/congrats fields null when not provided', funct
         ->and($giveaway->congrats_message_template)->toBeNull();
 });
 
+it('stores the one-off occurrence\'s scheduled_post_at as a true UTC instant, not the local timezone\'s wall-clock digits', function () {
+    $guild = Guild::factory()->create();
+    $theme = CollectionTheme::factory()->for($guild)->withItems(1)->create();
+    $item = $theme->items->first();
+    $localStart = now('Asia/Tokyo')->addDay()->setTime(18, 0);
+
+    $giveaway = (new CreateStandardGiveawayAction)->execute(
+        $guild, 'Nitro Friday', 'desc', '12345', StandardGiveaway::POSTING_MODE_MESSAGE,
+        1, false, 60, [$item->id], [],
+        null, $localStart, 'Asia/Tokyo',
+    );
+
+    $occurrence = $giveaway->occurrences->first();
+
+    // 18:00 in Asia/Tokyo (UTC+9, no DST) is 09:00 UTC - if scheduled_post_at
+    // were wrongly stored as the wall-clock "18:00" digits instead of the
+    // converted UTC instant, this would read "18:00" instead.
+    expect($occurrence->scheduled_post_at->clone()->utc()->format('H:i'))->toBe('09:00');
+});
+
 it('rejects zero prize items and creates nothing', function () {
     $guild = Guild::factory()->create();
 

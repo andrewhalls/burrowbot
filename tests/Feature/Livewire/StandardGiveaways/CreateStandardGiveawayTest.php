@@ -283,6 +283,19 @@ it('leaves banner image and claim/congrats fields null when left blank', functio
         ->and($giveaway->congrats_message_template)->toBeNull();
 });
 
+it('shows the selected prize item\'s name (not a bare id) as a chip', function () {
+    $guild = Guild::factory()->create();
+    $theme = CollectionTheme::factory()->for($guild)->withItems(0)->create();
+    $item = $theme->items()->create(['name' => 'Golden Ticket', 'sort_order' => 0]);
+    $staff = actingEventStaffFor($guild);
+
+    Livewire::actingAs($staff)
+        ->test(CreateStandardGiveaway::class, ['guild' => $guild])
+        ->call('addPrizeItem', $item->id)
+        ->assertSee('Golden Ticket')
+        ->assertDontSee("#{$item->id}");
+});
+
 it('surfaces search results for prize items scoped to the guild', function () {
     $guild = Guild::factory()->create();
     $theme = CollectionTheme::factory()->for($guild)->withItems(0)->create();

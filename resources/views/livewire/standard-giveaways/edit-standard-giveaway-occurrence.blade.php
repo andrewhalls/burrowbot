@@ -12,16 +12,7 @@
         @error('description') <p class="text-danger text-xs mt-1">{{ $message }}</p> @enderror
     </div>
 
-    <div>
-        <label class="block text-sm text-muted mb-1">Image (optional)</label>
-        <input type="file" wire:model="image" accept="image/*" class="w-full rounded-control bg-surface border border-line px-3 py-2 text-sm">
-        @error('image') <p class="text-danger text-xs mt-1">{{ $message }}</p> @enderror
-        @if ($image && $image->isPreviewable())
-            <img src="{{ $image->temporaryUrl() }}" alt="Preview" class="mt-2 h-24 rounded-control object-cover">
-        @elseif ($occurrence->image_url)
-            <img src="{{ $occurrence->image_url }}" alt="Current image" class="mt-2 h-24 rounded-control object-cover">
-        @endif
-    </div>
+    @include('partials.image-upload-field', ['fieldLabel' => 'Image (optional)', 'fieldModel' => 'image', 'fieldFile' => $image, 'fieldCurrentUrl' => $occurrence->image_url])
 
     <div>
         <label class="block text-sm text-muted mb-1">Prize items</label>
@@ -39,14 +30,7 @@
             </ul>
         @endif
 
-        <ul class="flex flex-wrap gap-2">
-            @foreach ($selectedPrizeItemIds as $itemId)
-                <li wire:key="selected-item-{{ $itemId }}" class="inline-flex items-center gap-1 rounded-full bg-surface-hover px-3 py-1 text-xs">
-                    #{{ $itemId }}
-                    <button type="button" wire:click="removePrizeItem({{ $itemId }})" class="text-muted hover:text-danger">&times;</button>
-                </li>
-            @endforeach
-        </ul>
+        @include('partials.prize-item-chips')
         @error('selectedPrizeItemIds') <p class="text-danger text-xs mt-1">{{ $message }}</p> @enderror
     </div>
 

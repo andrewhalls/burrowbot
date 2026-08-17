@@ -37,6 +37,20 @@ it('snapshots the event\'s current image into generated occurrences', function (
     expect($first->image_path)->toBe('event-images/abc.jpg');
 });
 
+it('stores scheduled_start_at as a true UTC instant, not the recurrence timezone\'s wall-clock digits', function () {
+    $localStart = now('Asia/Tokyo')->next('Monday')->setTime(18, 0);
+    $event = Event::factory()->recurring('FREQ=WEEKLY;BYDAY=MO', $localStart, 'Asia/Tokyo')->create();
+
+    $this->artisan('events:generate-occurrences')->assertSuccessful();
+
+    $first = $event->occurrences()->orderBy('scheduled_start_at')->first();
+
+    // 18:00 in Asia/Tokyo (UTC+9, no DST) is 09:00 UTC - if scheduled_start_at
+    // were wrongly stored as the wall-clock "18:00" digits instead of the
+    // converted UTC instant, this would read "18:00" instead.
+    expect($first->scheduled_start_at->clone()->utc()->format('H:i'))->toBe('09:00');
+});
+
 it('does not generate duplicate occurrences on a second run', function () {
     $event = Event::factory()->recurring(
         'FREQ=WEEKLY;BYDAY=WE',

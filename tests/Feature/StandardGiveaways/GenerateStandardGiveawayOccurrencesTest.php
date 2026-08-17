@@ -62,6 +62,21 @@ it('snapshots the giveaway banner image and claim/congrats fields into each gene
         ->and($first->congrats_message_template)->toBe('Congrats {winners}!');
 });
 
+it('stores scheduled_post_at as a true UTC instant, not the recurrence timezone\'s wall-clock digits', function () {
+    $localStart = now('Asia/Tokyo')->next('Friday')->setTime(18, 0);
+    $giveaway = StandardGiveaway::factory()->recurring('FREQ=WEEKLY;BYDAY=FR', $localStart, 'Asia/Tokyo')->create();
+    StandardGiveawayPrizeItem::factory()->for($giveaway, 'standardGiveaway')->create();
+
+    $this->artisan('standard-giveaways:generate-occurrences')->assertSuccessful();
+
+    $first = $giveaway->occurrences()->orderBy('scheduled_post_at')->first();
+
+    // 18:00 in Asia/Tokyo (UTC+9, no DST) is 09:00 UTC - if scheduled_post_at
+    // were wrongly stored as the wall-clock "18:00" digits instead of the
+    // converted UTC instant, this would read "18:00" instead.
+    expect($first->scheduled_post_at->clone()->utc()->format('H:i'))->toBe('09:00');
+});
+
 it('generates several weeks of occurrences in advance for a weekly series (widened window)', function () {
     $giveaway = StandardGiveaway::factory()->recurring(
         'FREQ=WEEKLY;BYDAY=FR',

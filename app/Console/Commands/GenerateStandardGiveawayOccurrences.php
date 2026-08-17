@@ -50,6 +50,15 @@ class GenerateStandardGiveawayOccurrences extends Command
             );
 
             foreach ($startTimes as $startAt) {
+                // ExpandRecurrenceRule deliberately returns wall-clock-local
+                // Carbon instances (e.g. "18:00" in the giveaway's own
+                // recurrence_timezone) - correct for expanding the RRULE,
+                // but scheduled_post_at is compared directly against now()
+                // (PostDueStandardGiveawayOccurrences), so it must be
+                // converted to a true UTC instant before it's ever
+                // persisted.
+                $startAt = $startAt->clone()->utc();
+
                 $occurrence = StandardGiveawayOccurrence::query()->firstOrCreate(
                     ['standard_giveaway_id' => $giveaway->id, 'scheduled_post_at' => $startAt],
                     [

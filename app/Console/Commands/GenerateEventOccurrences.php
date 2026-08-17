@@ -47,6 +47,16 @@ class GenerateEventOccurrences extends Command
             );
 
             foreach ($startTimes as $startAt) {
+                // ExpandRecurrenceRule deliberately returns wall-clock-local
+                // Carbon instances (e.g. "18:00" in the event's own
+                // recurrence_timezone) - correct for expanding the RRULE,
+                // but scheduled_start_at is compared directly against
+                // now() (EventOccurrence::hasStarted(),
+                // PostDueEventOccurrences), so it must be converted to a
+                // true UTC instant before it's ever persisted - mirrors
+                // CreateEventAction's one-off path.
+                $startAt = $startAt->clone()->utc();
+
                 $occurrence = EventOccurrence::query()->firstOrCreate(
                     ['event_id' => $event->id, 'scheduled_start_at' => $startAt],
                     [

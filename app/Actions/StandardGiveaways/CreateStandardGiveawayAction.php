@@ -113,7 +113,15 @@ class CreateStandardGiveawayAction
                     'claim_link' => $giveaway->claim_link,
                     'claim_deadline_hours' => $giveaway->claim_deadline_hours,
                     'congrats_message_template' => $giveaway->congrats_message_template,
-                    'scheduled_post_at' => $scheduledPostAt,
+                    // Unlike StandardGiveaway.recurrence_start_at
+                    // (deliberately kept as wall-clock numbers, paired with
+                    // recurrence_timezone, for ExpandRecurrenceRule), the
+                    // occurrence's scheduled_post_at is compared directly
+                    // against now() (PostDueStandardGiveawayOccurrences)
+                    // and so must be a true UTC instant - ->clone()->utc()
+                    // here, not the shared $scheduledPostAt itself. Mirrors
+                    // CreateEventAction's one-off path.
+                    'scheduled_post_at' => $scheduledPostAt->clone()->utc(),
                     'status' => StandardGiveawayOccurrence::STATUS_SCHEDULED,
                 ]);
             }

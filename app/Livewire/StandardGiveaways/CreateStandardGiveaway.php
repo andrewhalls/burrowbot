@@ -114,6 +114,20 @@ class CreateStandardGiveaway extends Component
         $this->selectedPrizeItemIds = array_values(array_diff($this->selectedPrizeItemIds, [$itemId]));
     }
 
+    /**
+     * Keyed by id, for turning $selectedPrizeItemIds into chips showing the
+     * item's thumbnail and name instead of a bare id in the view.
+     *
+     * @return \Illuminate\Support\Collection<int, CollectionThemeItem>
+     */
+    public function getSelectedPrizeItemModelsProperty()
+    {
+        return CollectionThemeItem::query()
+            ->whereIn('id', $this->selectedPrizeItemIds)
+            ->get()
+            ->keyBy('id');
+    }
+
     public function addDiscordRole(string $discordRoleId): void
     {
         if (! in_array($discordRoleId, $this->selectedRoleIds, true)) {
