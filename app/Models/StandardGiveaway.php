@@ -112,4 +112,17 @@ class StandardGiveaway extends Model
     {
         return $this->status === self::STATUS_ACTIVE;
     }
+
+    /**
+     * Whether this series is still safe to delete: true as long as none of
+     * its occurrences have reached Discord (posted or closed) - used by
+     * DeleteStandardGiveawayAction and to decide whether to offer the
+     * Delete action in the dashboard.
+     */
+    public function isDeletable(): bool
+    {
+        return $this->occurrences()
+            ->whereIn('status', [StandardGiveawayOccurrence::STATUS_POSTED, StandardGiveawayOccurrence::STATUS_CLOSED])
+            ->doesntExist();
+    }
 }

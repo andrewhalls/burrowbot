@@ -161,6 +161,91 @@ it('denies mounting for a guild the user does not admin', function () {
         ->assertForbidden();
 });
 
+it('toggles into and out of the edit form for the selected giveaway', function () {
+    $guild = Guild::factory()->create();
+    $theme = CollectionTheme::factory()->for($guild)->create();
+    $giveaway = Giveaway::factory()->for($theme, 'collectionTheme')->for($guild)->create();
+    $staff = actingGiveawayStaffFor($guild);
+
+    Livewire::actingAs($staff)
+        ->test(GiveawayIndex::class, ['guild' => $guild])
+        ->call('select', $giveaway->id)
+        ->assertDontSeeLivewire('giveaways.edit-giveaway')
+        ->call('toggleEdit')
+        ->assertSeeLivewire('giveaways.edit-giveaway')
+        ->call('toggleEdit')
+        ->assertDontSeeLivewire('giveaways.edit-giveaway');
+});
+
+it('offers Edit/Start/Delete in the header only while a draft giveaway is selected', function () {
+    $guild = Guild::factory()->create();
+    $theme = CollectionTheme::factory()->for($guild)->create();
+    $draft = Giveaway::factory()->for($theme, 'collectionTheme')->for($guild)->create();
+    $active = Giveaway::factory()->for($theme, 'collectionTheme')->for($guild)->active()->create();
+    $staff = actingGiveawayStaffFor($guild);
+
+    Livewire::actingAs($staff)
+        ->test(GiveawayIndex::class, ['guild' => $guild])
+        ->call('select', $draft->id)
+        ->assertSeeHtml('wire:click="toggleEdit"')
+        ->assertSeeHtml('wire:click="delete"');
+
+    Livewire::actingAs($staff)
+        ->test(GiveawayIndex::class, ['guild' => $guild])
+        ->call('select', $active->id)
+        ->assertDontSeeHtml('wire:click="toggleEdit"')
+        ->assertDontSeeHtml('wire:click="delete"');
+});
+
+it('deletes a draft giveaway from the list', function () {
+    $guild = Guild::factory()->create();
+    $theme = CollectionTheme::factory()->for($guild)->create();
+    $giveaway = Giveaway::factory()->for($theme, 'collectionTheme')->for($guild)->create();
+    $staff = actingGiveawayStaffFor($guild);
+
+    Livewire::actingAs($staff)
+        ->test(GiveawayIndex::class, ['guild' => $guild])
+        ->call('select', $giveaway->id)
+        ->call('delete')
+        ->assertSet('selectedId', null);
+
+    expect(Giveaway::query()->find($giveaway->id))->toBeNull();
+});
+
+it('opening the create form deselects the current giveaway, and selecting a tile closes the create form', function () {
+    $guild = Guild::factory()->create();
+    $theme = CollectionTheme::factory()->for($guild)->create();
+    $giveaway = Giveaway::factory()->for($theme, 'collectionTheme')->for($guild)->create();
+    $staff = actingGiveawayStaffFor($guild);
+
+    $component = Livewire::actingAs($staff)
+        ->test(GiveawayIndex::class, ['guild' => $guild])
+        ->call('select', $giveaway->id)
+        ->call('toggleCreateForm');
+
+    $component->assertSet('selectedId', null)
+        ->assertSeeLivewire('giveaways.create-giveaway');
+
+    $component->call('select', $giveaway->id)
+        ->assertSet('showCreateForm', false)
+        ->assertDontSeeLivewire('giveaways.create-giveaway');
+});
+
+it('selects the newly created giveaway after submitting the create form', function () {
+    $guild = Guild::factory()->create();
+    $theme = CollectionTheme::factory()->for($guild)->create();
+    $staff = actingGiveawayStaffFor($guild);
+
+    $component = Livewire::actingAs($staff)->test(GiveawayIndex::class, ['guild' => $guild]);
+    $component->call('toggleCreateForm')->call('$refresh');
+
+    $giveaway = Giveaway::factory()->for($theme, 'collectionTheme')->for($guild)->create();
+    $component->dispatch('giveaway-created', giveawayId: $giveaway->id);
+
+    $component->assertSet('showCreateForm', false)
+        ->assertSet('selectedId', $giveaway->id);
+});
+
 it('denies starting a giveaway belonging to a different guild', function () {
     $guild = Guild::factory()->create();
     $otherGuild = Guild::factory()->create();

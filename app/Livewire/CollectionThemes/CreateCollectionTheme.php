@@ -55,7 +55,7 @@ class CreateCollectionTheme extends Component
         $imagePath = $this->image?->store('theme-images', 'public');
 
         try {
-            $createTheme->execute($this->guild, $this->name, $this->items, $imagePath);
+            $theme = $createTheme->execute($this->guild, $this->name, $this->items, $imagePath);
         } catch (InvalidArgumentException) {
             $this->addError('items', 'A theme must have at least one item.');
 
@@ -65,7 +65,7 @@ class CreateCollectionTheme extends Component
         $this->reset(['name', 'items', 'image']);
         $this->items = ['', ''];
 
-        $this->dispatch('collection-theme-created');
+        $this->dispatch('collection-theme-created', themeId: $theme->id);
     }
 
     public function render(): View

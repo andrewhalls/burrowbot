@@ -1,16 +1,12 @@
 <div class="space-y-6">
     <div class="flex items-center justify-between">
         <h2 class="text-lg font-semibold">Themed collections</h2>
-        <button type="button" wire:click="$toggle('showCreateForm')" class="rounded-pill bg-accent hover:bg-accent-hover px-4 py-2 text-sm font-medium text-accent-ink">
+        <button type="button" wire:click="toggleCreateForm" class="rounded-pill bg-accent hover:bg-accent-hover px-4 py-2 text-sm font-medium text-accent-ink">
             {{ $showCreateForm ? 'Cancel' : '+ New theme' }}
         </button>
     </div>
 
-    @if ($showCreateForm)
-        <livewire:collection-themes.create-collection-theme :guild="$guild" :key="'create-theme-'.$guild->id" />
-    @endif
-
-    <x-list-detail-shell :selected="$selectedTheme !== null">
+    <x-list-detail-shell :selected="$selectedTheme !== null || $showCreateForm">
         <x-slot:list>
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 @forelse ($themes as $theme)
@@ -32,6 +28,9 @@
                         @endif
                         <p class="font-medium text-ink text-sm truncate w-full">{{ $theme->name }}</p>
                         <p class="text-xs text-muted">{{ $theme->items_count }} {{ Str::plural('item', $theme->items_count) }}</p>
+                        <button type="button" wire:click.stop="duplicate({{ $theme->id }})" class="mt-1 text-xs text-accent hover:text-accent">
+                            Duplicate
+                        </button>
                     </div>
                 @empty
                     <div class="col-span-2">
@@ -42,7 +41,9 @@
         </x-slot:list>
 
         <x-slot:detail>
-            @if ($selectedTheme)
+            @if ($showCreateForm)
+                <livewire:collection-themes.create-collection-theme :guild="$guild" :key="'create-theme-'.$guild->id" />
+            @elseif ($selectedTheme)
                 <livewire:collection-themes.manage-collection-theme-items :theme="$selectedTheme" :key="'theme-detail-'.$selectedTheme->id" />
             @endif
         </x-slot:detail>

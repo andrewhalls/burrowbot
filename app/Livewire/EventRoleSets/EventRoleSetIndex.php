@@ -25,10 +25,20 @@ class EventRoleSetIndex extends Component
         $this->guild = $guild;
     }
 
+    public function toggleCreateForm(): void
+    {
+        $this->showCreateForm = ! $this->showCreateForm;
+
+        if ($this->showCreateForm) {
+            $this->selectedId = null;
+        }
+    }
+
     #[On('event-role-set-created')]
-    public function closeCreateForm(): void
+    public function closeCreateForm(int $roleSetId): void
     {
         $this->showCreateForm = false;
+        $this->selectedId = $roleSetId;
     }
 
     public function select(int $roleSetId): void
@@ -36,6 +46,7 @@ class EventRoleSetIndex extends Component
         $exists = EventRoleSet::query()->where('guild_id', $this->guild->id)->where('id', $roleSetId)->exists();
 
         $this->selectedId = $exists ? $roleSetId : null;
+        $this->showCreateForm = false;
     }
 
     public function deselect(): void

@@ -4,11 +4,13 @@ declare(strict_types=1);
 
 namespace App\Livewire\Events;
 
+use App\Actions\Events\DeleteEventAction;
 use App\Actions\Events\UpdateEventStatusAction;
 use App\Models\Event;
 use App\Models\EventOccurrence;
 use App\Models\Guild;
 use Illuminate\Contracts\View\View;
+use InvalidArgumentException;
 use Livewire\Attributes\On;
 use Livewire\Component;
 
@@ -36,10 +38,22 @@ class EventIndex extends Component
         $this->guild = $guild;
     }
 
+    public function toggleCreateForm(): void
+    {
+        $this->showCreateForm = ! $this->showCreateForm;
+
+        if ($this->showCreateForm) {
+            $this->selectedId = null;
+            $this->selectedOccurrenceId = null;
+            $this->editing = false;
+        }
+    }
+
     #[On('event-created')]
-    public function closeCreateForm(): void
+    public function closeCreateForm(int $eventId): void
     {
         $this->showCreateForm = false;
+        $this->selectedId = $eventId;
     }
 
     #[On('event-updated')]
@@ -64,6 +78,7 @@ class EventIndex extends Component
         $this->selectedId = $exists ? $eventId : null;
         $this->selectedOccurrenceId = null;
         $this->editing = false;
+        $this->showCreateForm = false;
     }
 
     public function deselect(): void
@@ -80,6 +95,25 @@ class EventIndex extends Component
         $this->authorize('manage', $event);
 
         $this->editing = ! $this->editing;
+    }
+
+    public function delete(DeleteEventAction $deleteEvent): void
+    {
+        $event = Event::query()->where('guild_id', $this->guild->id)->findOrFail($this->selectedId);
+
+        $this->authorize('manage', $event);
+
+        try {
+            $deleteEvent->execute($event);
+        } catch (InvalidArgumentException $e) {
+            $this->addError('delete', $e->getMessage());
+
+            return;
+        }
+
+        $this->selectedId = null;
+        $this->selectedOccurrenceId = null;
+        $this->editing = false;
     }
 
     public function selectOccurrence(int $occurrenceId): void

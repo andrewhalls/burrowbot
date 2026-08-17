@@ -87,7 +87,7 @@ class CreateEventRoleSet extends Component
         ]);
 
         try {
-            $createRoleSet->execute($this->guild, $this->name, $this->allowMultipleRoles, $this->roles);
+            $roleSet = $createRoleSet->execute($this->guild, $this->name, $this->allowMultipleRoles, $this->roles);
         } catch (InvalidArgumentException $e) {
             $this->addError('roles', $e->getMessage());
 
@@ -97,7 +97,7 @@ class CreateEventRoleSet extends Component
         $this->reset(['name', 'allowMultipleRoles']);
         $this->roles = [];
 
-        $this->dispatch('event-role-set-created');
+        $this->dispatch('event-role-set-created', roleSetId: $roleSet->id);
     }
 
     protected function guildForRoleSearch(): Guild

@@ -35,35 +35,6 @@ function actingStaffFor($guild): User
     return $user;
 }
 
-it('offers an Edit toggle only while the giveaway is a draft', function () {
-    $theme = CollectionTheme::factory()->withItems(1)->create();
-    $draft = Giveaway::factory()->for($theme, 'collectionTheme')->create();
-    $active = Giveaway::factory()->for($theme, 'collectionTheme')->active()->create();
-    $staff = actingStaffFor($draft->guild);
-
-    Livewire::actingAs($staff)
-        ->test(GiveawayDashboard::class, ['giveaway' => $draft])
-        ->assertSeeHtml('wire:click="toggleEdit"');
-
-    Livewire::actingAs($staff)
-        ->test(GiveawayDashboard::class, ['giveaway' => $active])
-        ->assertDontSeeHtml('wire:click="toggleEdit"');
-});
-
-it('toggles into and out of the edit form', function () {
-    $theme = CollectionTheme::factory()->withItems(1)->create();
-    $giveaway = Giveaway::factory()->for($theme, 'collectionTheme')->create();
-    $staff = actingStaffFor($giveaway->guild);
-
-    Livewire::actingAs($staff)
-        ->test(GiveawayDashboard::class, ['giveaway' => $giveaway])
-        ->assertDontSeeLivewire('giveaways.edit-giveaway')
-        ->call('toggleEdit')
-        ->assertSeeLivewire('giveaways.edit-giveaway')
-        ->call('toggleEdit')
-        ->assertDontSeeLivewire('giveaways.edit-giveaway');
-});
-
 it('shows who created the giveaway when known', function () {
     $creator = User::factory()->create(['name' => 'Ada Admin']);
     $theme = CollectionTheme::factory()->withItems(1)->create();
@@ -155,22 +126,3 @@ it('denies dashboard access to a user who does not admin the giveaway guild', fu
         ->assertForbidden();
 });
 
-it('starts a draft giveaway from the dashboard', function () {
-    $giveaway = Giveaway::factory()->create();
-    $staff = actingStaffFor($giveaway->guild);
-
-    Livewire::actingAs($staff)
-        ->test(GiveawayDashboard::class, ['giveaway' => $giveaway])
-        ->call('start');
-
-    expect($giveaway->fresh()->isActive())->toBeTrue();
-});
-
-it('denies starting a giveaway to a user who does not admin its guild', function () {
-    $giveaway = Giveaway::factory()->create();
-    $outsider = User::factory()->create();
-
-    Livewire::actingAs($outsider)
-        ->test(GiveawayDashboard::class, ['giveaway' => $giveaway])
-        ->assertForbidden();
-});

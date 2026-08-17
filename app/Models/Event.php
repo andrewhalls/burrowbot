@@ -99,4 +99,17 @@ class Event extends Model
     {
         return $this->status === self::STATUS_ACTIVE;
     }
+
+    /**
+     * Whether this series is still safe to delete: true as long as none of
+     * its occurrences have been posted to Discord - used by
+     * DeleteEventAction and to decide whether to offer the Delete action
+     * in the dashboard.
+     */
+    public function isDeletable(): bool
+    {
+        return $this->occurrences()
+            ->where('status', EventOccurrence::STATUS_POSTED)
+            ->doesntExist();
+    }
 }

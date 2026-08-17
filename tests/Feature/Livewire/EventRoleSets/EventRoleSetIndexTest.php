@@ -71,6 +71,40 @@ it('refuses to select a role set belonging to a different guild', function () {
         ->assertSee('Select an item from the list');
 });
 
+it('opening the create form deselects the current role set, and selecting a tile closes the create form', function () {
+    $user = User::factory()->create();
+    $guild = Guild::factory()->create();
+    GuildAdmin::factory()->for($guild)->for($user)->create();
+    $roleSet = EventRoleSet::factory()->for($guild)->withRoles(1)->create();
+
+    $component = Livewire::actingAs($user)
+        ->test(EventRoleSetIndex::class, ['guild' => $guild])
+        ->call('select', $roleSet->id)
+        ->call('toggleCreateForm');
+
+    $component->assertSet('selectedId', null)
+        ->assertSeeLivewire('event-role-sets.create-event-role-set');
+
+    $component->call('select', $roleSet->id)
+        ->assertSet('showCreateForm', false)
+        ->assertDontSeeLivewire('event-role-sets.create-event-role-set');
+});
+
+it('selects the newly created role set after submitting the create form', function () {
+    $user = User::factory()->create();
+    $guild = Guild::factory()->create();
+    GuildAdmin::factory()->for($guild)->for($user)->create();
+
+    $component = Livewire::actingAs($user)->test(EventRoleSetIndex::class, ['guild' => $guild]);
+    $component->call('toggleCreateForm');
+
+    $roleSet = EventRoleSet::factory()->for($guild)->withRoles(1)->create();
+    $component->dispatch('event-role-set-created', roleSetId: $roleSet->id);
+
+    $component->assertSet('showCreateForm', false)
+        ->assertSet('selectedId', $roleSet->id);
+});
+
 it('denies mounting for a guild the user does not admin', function () {
     $user = User::factory()->create();
     $guild = Guild::factory()->create();

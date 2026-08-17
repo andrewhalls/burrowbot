@@ -21,6 +21,36 @@ it('lists themed collections for the guild with their item count', function () {
         ->assertSee('3 items');
 });
 
+it('duplicates a theme and selects the duplicate', function () {
+    $user = User::factory()->create();
+    $guild = Guild::factory()->create();
+    GuildAdmin::factory()->for($guild)->for($user)->create();
+    $theme = CollectionTheme::factory()->for($guild)->withItems(2)->create(['name' => 'Retro Arcade']);
+
+    $component = Livewire::actingAs($user)
+        ->test(CollectionThemeIndex::class, ['guild' => $guild])
+        ->call('duplicate', $theme->id);
+
+    expect(CollectionTheme::query()->where('name', 'Retro Arcade (Copy)')->exists())->toBeTrue();
+
+    $duplicate = CollectionTheme::query()->where('name', 'Retro Arcade (Copy)')->sole();
+    $component->assertSet('selectedId', $duplicate->id);
+});
+
+it('refuses to duplicate a theme belonging to a different guild', function () {
+    $user = User::factory()->create();
+    $guild = Guild::factory()->create();
+    GuildAdmin::factory()->for($guild)->for($user)->create();
+    $otherTheme = CollectionTheme::factory()->withItems(1)->create();
+
+    expect(fn () => Livewire::actingAs($user)
+        ->test(CollectionThemeIndex::class, ['guild' => $guild])
+        ->call('duplicate', $otherTheme->id)
+    )->toThrow(Illuminate\Database\Eloquent\ModelNotFoundException::class);
+
+    expect(CollectionTheme::query()->count())->toBe(1);
+});
+
 it('shows a theme\'s image in its tile when set, and the fallback glyph when not', function () {
     $user = User::factory()->create();
     $guild = Guild::factory()->create();
@@ -79,6 +109,40 @@ it('refuses to select a theme belonging to a different guild', function () {
         ->test(CollectionThemeIndex::class, ['guild' => $guild])
         ->call('select', $otherTheme->id)
         ->assertSee('Select an item from the list');
+});
+
+it('opening the create form deselects the current theme, and selecting a tile closes the create form', function () {
+    $user = User::factory()->create();
+    $guild = Guild::factory()->create();
+    GuildAdmin::factory()->for($guild)->for($user)->create();
+    $theme = CollectionTheme::factory()->for($guild)->withItems(1)->create();
+
+    $component = Livewire::actingAs($user)
+        ->test(CollectionThemeIndex::class, ['guild' => $guild])
+        ->call('select', $theme->id)
+        ->call('toggleCreateForm');
+
+    $component->assertSet('selectedId', null)
+        ->assertSeeLivewire('collection-themes.create-collection-theme');
+
+    $component->call('select', $theme->id)
+        ->assertSet('showCreateForm', false)
+        ->assertDontSeeLivewire('collection-themes.create-collection-theme');
+});
+
+it('selects the newly created theme after submitting the create form', function () {
+    $user = User::factory()->create();
+    $guild = Guild::factory()->create();
+    GuildAdmin::factory()->for($guild)->for($user)->create();
+
+    $component = Livewire::actingAs($user)->test(CollectionThemeIndex::class, ['guild' => $guild]);
+    $component->call('toggleCreateForm');
+
+    $theme = CollectionTheme::factory()->for($guild)->withItems(1)->create();
+    $component->dispatch('collection-theme-created', themeId: $theme->id);
+
+    $component->assertSet('showCreateForm', false)
+        ->assertSet('selectedId', $theme->id);
 });
 
 it('denies mounting for a guild the user does not admin', function () {

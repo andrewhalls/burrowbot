@@ -1,16 +1,12 @@
 <div class="space-y-6">
     <div class="flex items-center justify-between">
         <h2 class="text-lg font-semibold">Event role sets</h2>
-        <button type="button" wire:click="$toggle('showCreateForm')" class="rounded-pill bg-accent hover:bg-accent-hover px-4 py-2 text-sm font-medium text-accent-ink">
+        <button type="button" wire:click="toggleCreateForm" class="rounded-pill bg-accent hover:bg-accent-hover px-4 py-2 text-sm font-medium text-accent-ink">
             {{ $showCreateForm ? 'Cancel' : '+ New role set' }}
         </button>
     </div>
 
-    @if ($showCreateForm)
-        <livewire:event-role-sets.create-event-role-set :guild="$guild" :key="'create-role-set-'.$guild->id" />
-    @endif
-
-    <x-list-detail-shell :selected="$selectedRoleSet !== null">
+    <x-list-detail-shell :selected="$selectedRoleSet !== null || $showCreateForm">
         <x-slot:list>
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 @forelse ($roleSets as $roleSet)
@@ -37,7 +33,9 @@
         </x-slot:list>
 
         <x-slot:detail>
-            @if ($selectedRoleSet)
+            @if ($showCreateForm)
+                <livewire:event-role-sets.create-event-role-set :guild="$guild" :key="'create-role-set-'.$guild->id" />
+            @elseif ($selectedRoleSet)
                 <livewire:event-role-sets.manage-event-role-set-roles :role-set="$selectedRoleSet" :key="'role-set-detail-'.$selectedRoleSet->id" />
             @endif
         </x-slot:detail>

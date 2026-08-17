@@ -4,10 +4,12 @@ declare(strict_types=1);
 
 namespace App\Livewire\Giveaways;
 
+use App\Actions\Giveaways\DeleteGiveawayDraftAction;
 use App\Actions\Giveaways\StartGiveawayAction;
 use App\Models\Giveaway;
 use App\Models\Guild;
 use Illuminate\Contracts\View\View;
+use InvalidArgumentException;
 use Livewire\Attributes\On;
 use Livewire\Component;
 
@@ -26,6 +28,8 @@ class GiveawayIndex extends Component
 
     public ?int $selectedId = null;
 
+    public bool $editing = false;
+
     public function mount(Guild $guild): void
     {
         $this->authorize('view', $guild);
@@ -33,10 +37,27 @@ class GiveawayIndex extends Component
         $this->guild = $guild;
     }
 
+    public function toggleCreateForm(): void
+    {
+        $this->showCreateForm = ! $this->showCreateForm;
+
+        if ($this->showCreateForm) {
+            $this->selectedId = null;
+            $this->editing = false;
+        }
+    }
+
     #[On('giveaway-created')]
-    public function closeCreateForm(): void
+    public function closeCreateForm(int $giveawayId): void
     {
         $this->showCreateForm = false;
+        $this->selectedId = $giveawayId;
+    }
+
+    #[On('giveaway-updated')]
+    public function closeEditForm(): void
+    {
+        $this->editing = false;
     }
 
     public function select(int $giveawayId): void
@@ -44,11 +65,23 @@ class GiveawayIndex extends Component
         $exists = Giveaway::query()->where('guild_id', $this->guild->id)->where('id', $giveawayId)->exists();
 
         $this->selectedId = $exists ? $giveawayId : null;
+        $this->showCreateForm = false;
+        $this->editing = false;
     }
 
     public function deselect(): void
     {
         $this->selectedId = null;
+        $this->editing = false;
+    }
+
+    public function toggleEdit(): void
+    {
+        $giveaway = Giveaway::query()->where('guild_id', $this->guild->id)->findOrFail($this->selectedId);
+
+        $this->authorize('manage', $giveaway);
+
+        $this->editing = ! $this->editing;
     }
 
     public function start(int $giveawayId, StartGiveawayAction $startGiveaway): void
@@ -58,6 +91,24 @@ class GiveawayIndex extends Component
         $this->authorize('manage', $giveaway);
 
         $startGiveaway->execute($giveaway);
+    }
+
+    public function delete(DeleteGiveawayDraftAction $deleteGiveaway): void
+    {
+        $giveaway = Giveaway::query()->where('guild_id', $this->guild->id)->findOrFail($this->selectedId);
+
+        $this->authorize('manage', $giveaway);
+
+        try {
+            $deleteGiveaway->execute($giveaway);
+        } catch (InvalidArgumentException $e) {
+            $this->addError('delete', $e->getMessage());
+
+            return;
+        }
+
+        $this->selectedId = null;
+        $this->editing = false;
     }
 
     public function render(): View

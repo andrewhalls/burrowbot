@@ -4,11 +4,13 @@ declare(strict_types=1);
 
 namespace App\Livewire\StandardGiveaways;
 
+use App\Actions\StandardGiveaways\DeleteStandardGiveawayAction;
 use App\Actions\StandardGiveaways\UpdateStandardGiveawayStatusAction;
 use App\Models\Guild;
 use App\Models\StandardGiveaway;
 use App\Models\StandardGiveawayOccurrence;
 use Illuminate\Contracts\View\View;
+use InvalidArgumentException;
 use Livewire\Attributes\On;
 use Livewire\Component;
 
@@ -22,6 +24,8 @@ class StandardGiveawayIndex extends Component
 
     public bool $editingSeries = false;
 
+    public ?int $editingOccurrenceId = null;
+
     public function mount(Guild $guild): void
     {
         $this->authorize('view', $guild);
@@ -29,16 +33,34 @@ class StandardGiveawayIndex extends Component
         $this->guild = $guild;
     }
 
+    public function toggleCreateForm(): void
+    {
+        $this->showCreateForm = ! $this->showCreateForm;
+
+        if ($this->showCreateForm) {
+            $this->selectedId = null;
+            $this->editingSeries = false;
+            $this->editingOccurrenceId = null;
+        }
+    }
+
     #[On('standard-giveaway-created')]
-    public function closeCreateForm(): void
+    public function closeCreateForm(int $giveawayId): void
     {
         $this->showCreateForm = false;
+        $this->selectedId = $giveawayId;
     }
 
     #[On('standard-giveaway-updated')]
     public function closeEditForm(): void
     {
         $this->editingSeries = false;
+    }
+
+    #[On('standard-giveaway-occurrence-updated')]
+    public function closeEditOccurrenceForm(): void
+    {
+        $this->editingOccurrenceId = null;
     }
 
     public function setStatus(int $giveawayId, string $status, UpdateStandardGiveawayStatusAction $updateStatus): void
@@ -56,12 +78,15 @@ class StandardGiveawayIndex extends Component
 
         $this->selectedId = $exists ? $giveawayId : null;
         $this->editingSeries = false;
+        $this->showCreateForm = false;
+        $this->editingOccurrenceId = null;
     }
 
     public function deselect(): void
     {
         $this->selectedId = null;
         $this->editingSeries = false;
+        $this->editingOccurrenceId = null;
     }
 
     public function toggleEditSeries(): void
@@ -71,6 +96,47 @@ class StandardGiveawayIndex extends Component
         $this->authorize('manage', $giveaway);
 
         $this->editingSeries = ! $this->editingSeries;
+        $this->editingOccurrenceId = null;
+    }
+
+    public function toggleEditOccurrence(int $occurrenceId): void
+    {
+        $giveaway = StandardGiveaway::query()->where('guild_id', $this->guild->id)->findOrFail($this->selectedId);
+
+        $this->authorize('manage', $giveaway);
+
+        if ($this->editingOccurrenceId === $occurrenceId) {
+            $this->editingOccurrenceId = null;
+
+            return;
+        }
+
+        $occurrence = StandardGiveawayOccurrence::query()
+            ->where('standard_giveaway_id', $giveaway->id)
+            ->where('status', StandardGiveawayOccurrence::STATUS_SCHEDULED)
+            ->findOrFail($occurrenceId);
+
+        $this->editingOccurrenceId = $occurrence->id;
+        $this->editingSeries = false;
+    }
+
+    public function delete(DeleteStandardGiveawayAction $deleteGiveaway): void
+    {
+        $giveaway = StandardGiveaway::query()->where('guild_id', $this->guild->id)->findOrFail($this->selectedId);
+
+        $this->authorize('manage', $giveaway);
+
+        try {
+            $deleteGiveaway->execute($giveaway);
+        } catch (InvalidArgumentException $e) {
+            $this->addError('delete', $e->getMessage());
+
+            return;
+        }
+
+        $this->selectedId = null;
+        $this->editingSeries = false;
+        $this->editingOccurrenceId = null;
     }
 
     public function render(): View
@@ -93,10 +159,30 @@ class StandardGiveawayIndex extends Component
                 ->first()
             : null;
 
+        // Upcoming (not-yet-posted) occurrences an admin can edit directly -
+        // soonest first, capped like event-summary.blade.php's own "Recent
+        // occurrences" list (design.md Decision 3).
+        $upcomingOccurrences = $this->selectedId
+            ? StandardGiveawayOccurrence::query()
+                ->where('standard_giveaway_id', $this->selectedId)
+                ->where('status', StandardGiveawayOccurrence::STATUS_SCHEDULED)
+                ->orderBy('scheduled_post_at')
+                ->limit(10)
+                ->get()
+            : collect();
+
+        $editingOccurrence = $this->editingOccurrenceId
+            ? StandardGiveawayOccurrence::query()
+                ->where('standard_giveaway_id', $this->selectedId)
+                ->find($this->editingOccurrenceId)
+            : null;
+
         return view('livewire.standard-giveaways.standard-giveaway-index', [
             'giveaways' => $giveaways,
             'selectedGiveaway' => $this->selectedId ? $giveaways->firstWhere('id', $this->selectedId) : null,
             'selectedOccurrence' => $selectedOccurrence,
+            'upcomingOccurrences' => $upcomingOccurrences,
+            'editingOccurrence' => $editingOccurrence,
         ]);
     }
 }

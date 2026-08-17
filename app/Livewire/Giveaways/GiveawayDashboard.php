@@ -5,28 +5,29 @@ declare(strict_types=1);
 namespace App\Livewire\Giveaways;
 
 use App\Actions\Giveaways\FulfillGiveawayEntryAction;
-use App\Actions\Giveaways\StartGiveawayAction;
 use App\Models\Giveaway;
 use App\Models\GiveawayEntry;
 use Illuminate\Contracts\View\View;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\Auth;
-use Livewire\Attributes\On;
 use Livewire\Attributes\Url;
 use Livewire\Component;
 use Livewire\WithPagination;
 
 /**
  * Staff screen for one giveaway: search/filter entrants and mark prizes
- * fulfilled. See openspec specs/giveaway-admin-dashboard.
+ * fulfilled. A plain display component - Start/Edit/Delete live in
+ * GiveawayIndex (design.md Decision 1, improve-list-detail-header-and-
+ * create-placement), mirroring OccurrenceDashboard/occurrence-roster for
+ * the other two domains.
+ *
+ * See openspec specs/giveaway-admin-dashboard.
  */
 class GiveawayDashboard extends Component
 {
     use WithPagination;
 
     public Giveaway $giveaway;
-
-    public bool $editing = false;
 
     #[Url]
     public string $search = '';
@@ -58,27 +59,6 @@ class GiveawayDashboard extends Component
             ->findOrFail($entryId);
 
         $fulfillEntry->execute($entry, Auth::user());
-    }
-
-    public function start(StartGiveawayAction $startGiveaway): void
-    {
-        $this->authorize('manage', $this->giveaway);
-
-        $this->giveaway = $startGiveaway->execute($this->giveaway);
-    }
-
-    public function toggleEdit(): void
-    {
-        $this->authorize('manage', $this->giveaway);
-
-        $this->editing = ! $this->editing;
-    }
-
-    #[On('giveaway-updated')]
-    public function refreshAfterEdit(): void
-    {
-        $this->giveaway->refresh();
-        $this->editing = false;
     }
 
     public function render(): View

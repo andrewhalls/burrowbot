@@ -57,6 +57,36 @@ it('shows who created an event on its tile and in the summary panel', function (
         ->assertSee('Created by Ada Admin');
 });
 
+it('deletes a series with no posted occurrences', function () {
+    $guild = Guild::factory()->create();
+    $event = Event::factory()->for($guild)->create();
+    $staff = actingEventStaffFor($guild);
+
+    Livewire::actingAs($staff)
+        ->test(EventIndex::class, ['guild' => $guild])
+        ->call('select', $event->id)
+        ->call('delete')
+        ->assertSet('selectedId', null);
+
+    expect(Event::query()->find($event->id))->toBeNull();
+});
+
+it('does not offer delete, and rejects it server-side, once a series has a posted occurrence', function () {
+    $guild = Guild::factory()->create();
+    $event = Event::factory()->for($guild)->create();
+    EventOccurrence::factory()->posted()->create(['event_id' => $event->id]);
+    $staff = actingEventStaffFor($guild);
+
+    Livewire::actingAs($staff)
+        ->test(EventIndex::class, ['guild' => $guild])
+        ->call('select', $event->id)
+        ->assertDontSeeHtml('wire:click="delete"')
+        ->call('delete')
+        ->assertHasErrors('delete');
+
+    expect(Event::query()->find($event->id))->not->toBeNull();
+});
+
 it('toggles into and out of the edit form for the selected event', function () {
     $guild = Guild::factory()->create();
     $event = Event::factory()->for($guild)->create();
@@ -151,6 +181,38 @@ it('refuses to select an event belonging to a different guild', function () {
         ->test(EventIndex::class, ['guild' => $guild])
         ->call('select', $otherEvent->id)
         ->assertSee('Select an item from the list');
+});
+
+it('opening the create form deselects the current event, and selecting a tile closes the create form', function () {
+    $guild = Guild::factory()->create();
+    $event = Event::factory()->for($guild)->create();
+    $staff = actingEventStaffFor($guild);
+
+    $component = Livewire::actingAs($staff)
+        ->test(EventIndex::class, ['guild' => $guild])
+        ->call('select', $event->id)
+        ->call('toggleCreateForm');
+
+    $component->assertSet('selectedId', null)
+        ->assertSeeLivewire('events.create-event');
+
+    $component->call('select', $event->id)
+        ->assertSet('showCreateForm', false)
+        ->assertDontSeeLivewire('events.create-event');
+});
+
+it('selects the newly created event after submitting the create form', function () {
+    $guild = Guild::factory()->create();
+    $staff = actingEventStaffFor($guild);
+
+    $component = Livewire::actingAs($staff)->test(EventIndex::class, ['guild' => $guild]);
+    $component->call('toggleCreateForm');
+
+    $event = Event::factory()->for($guild)->create();
+    $component->dispatch('event-created', eventId: $event->id);
+
+    $component->assertSet('showCreateForm', false)
+        ->assertSet('selectedId', $event->id);
 });
 
 it('denies mounting for a guild the user does not admin', function () {

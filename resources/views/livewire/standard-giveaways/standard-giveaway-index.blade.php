@@ -1,16 +1,27 @@
 <div class="space-y-6">
-    <div class="flex items-center justify-between">
+    <div class="flex items-center justify-between gap-2">
         <h2 class="text-lg font-semibold">Standard giveaways</h2>
-        <button type="button" wire:click="$toggle('showCreateForm')" class="rounded-pill bg-accent hover:bg-accent-hover px-4 py-2 text-sm font-medium text-accent-ink">
-            {{ $showCreateForm ? 'Cancel' : '+ New giveaway' }}
-        </button>
+        <div class="flex items-center gap-2">
+            @error('delete') <p class="text-xs text-danger">{{ $message }}</p> @enderror
+            @if ($selectedGiveaway && ! $showCreateForm && ! $editingOccurrence)
+                <button type="button" wire:click="toggleEditSeries"
+                        class="rounded-pill bg-surface-hover hover:bg-line px-4 py-2 text-sm font-medium text-ink">
+                    {{ $editingSeries ? 'Cancel' : 'Edit series' }}
+                </button>
+                @if ($selectedGiveaway->isDeletable())
+                    <button type="button" wire:click="delete" wire:confirm="Delete this standard giveaway? This cannot be undone."
+                            class="rounded-pill border border-line text-danger hover:bg-danger/10 px-4 py-2 text-sm font-medium">
+                        Delete
+                    </button>
+                @endif
+            @endif
+            <button type="button" wire:click="toggleCreateForm" class="rounded-pill bg-accent hover:bg-accent-hover px-4 py-2 text-sm font-medium text-accent-ink">
+                {{ $showCreateForm ? 'Cancel' : '+ New giveaway' }}
+            </button>
+        </div>
     </div>
 
-    @if ($showCreateForm)
-        <livewire:standard-giveaways.create-standard-giveaway :guild="$guild" :key="'create-std-giveaway-'.$guild->id" />
-    @endif
-
-    <x-list-detail-shell :selected="$selectedGiveaway !== null">
+    <x-list-detail-shell :selected="$selectedGiveaway !== null || $showCreateForm">
         <x-slot:list>
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 @forelse ($giveaways as $giveaway)
@@ -65,21 +76,37 @@
         </x-slot:list>
 
         <x-slot:detail>
-            @if ($selectedGiveaway)
-                <div class="flex justify-end mb-3">
-                    <button type="button" wire:click="toggleEditSeries"
-                            class="rounded-pill bg-surface-hover hover:bg-line px-4 py-2 text-sm font-medium text-ink">
-                        {{ $editingSeries ? 'Cancel' : 'Edit series' }}
-                    </button>
-                </div>
-            @endif
-
-            @if ($editingSeries && $selectedGiveaway)
+            @if ($showCreateForm)
+                <livewire:standard-giveaways.create-standard-giveaway :guild="$guild" :key="'create-std-giveaway-'.$guild->id" />
+            @elseif ($editingSeries && $selectedGiveaway)
                 <livewire:standard-giveaways.edit-standard-giveaway :giveaway="$selectedGiveaway" :key="'edit-std-giveaway-'.$selectedGiveaway->id" />
-            @elseif ($selectedOccurrence)
-                <livewire:standard-giveaways.occurrence-dashboard :occurrence="$selectedOccurrence" :key="'std-giveaway-detail-'.$selectedOccurrence->id" />
+            @elseif ($editingOccurrence)
+                <livewire:standard-giveaways.edit-standard-giveaway-occurrence :occurrence="$editingOccurrence" :key="'edit-std-giveaway-occurrence-'.$editingOccurrence->id" />
             @elseif ($selectedGiveaway)
-                <x-list-detail-empty message="No occurrences generated for this giveaway yet." />
+                <div class="space-y-4">
+                    @if ($upcomingOccurrences->isNotEmpty())
+                        <div class="rounded-card border border-line divide-y divide-line">
+                            <p class="text-xs text-muted px-3 py-2 bg-surface-hover">Upcoming occurrences - edit one in advance</p>
+                            @foreach ($upcomingOccurrences as $occurrence)
+                                <div wire:key="upcoming-occurrence-{{ $occurrence->id }}" class="p-3 text-sm flex items-center justify-between gap-3">
+                                    <div class="min-w-0">
+                                        <p class="text-ink"><x-local-time :at="$occurrence->scheduled_post_at" /></p>
+                                        <p class="text-xs text-muted truncate">{{ $occurrence->description }} &middot; {{ count($occurrence->prize_item_ids) }} item(s)</p>
+                                    </div>
+                                    <button type="button" wire:click="toggleEditOccurrence({{ $occurrence->id }})" class="text-xs text-accent hover:text-accent shrink-0">
+                                        Edit
+                                    </button>
+                                </div>
+                            @endforeach
+                        </div>
+                    @endif
+
+                    @if ($selectedOccurrence)
+                        <livewire:standard-giveaways.occurrence-dashboard :occurrence="$selectedOccurrence" :key="'std-giveaway-detail-'.$selectedOccurrence->id" />
+                    @else
+                        <x-list-detail-empty message="No occurrences generated for this giveaway yet." />
+                    @endif
+                </div>
             @endif
         </x-slot:detail>
     </x-list-detail-shell>

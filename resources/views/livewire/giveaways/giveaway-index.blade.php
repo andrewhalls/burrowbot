@@ -1,16 +1,29 @@
 <div class="space-y-6">
-    <div class="flex items-center justify-between">
+    <div class="flex items-center justify-between gap-2">
         <h2 class="text-lg font-semibold text-ink">Popup giveaways</h2>
-        <button type="button" wire:click="$toggle('showCreateForm')" class="rounded-pill bg-accent hover:bg-accent-hover px-4 py-2 text-sm font-medium text-accent-ink">
-            {{ $showCreateForm ? 'Cancel' : '+ New giveaway' }}
-        </button>
+        <div class="flex items-center gap-2">
+            @error('delete') <p class="text-xs text-danger">{{ $message }}</p> @enderror
+            @if ($selectedGiveaway && $selectedGiveaway->isDraft() && ! $showCreateForm)
+                <button type="button" wire:click="toggleEdit"
+                        class="rounded-pill bg-surface-hover hover:bg-line px-4 py-2 text-sm font-medium text-ink">
+                    {{ $editing ? 'Cancel' : 'Edit' }}
+                </button>
+                <button type="button" wire:click="start({{ $selectedGiveaway->id }})" wire:confirm="Start this popup giveaway now?"
+                        class="rounded-pill bg-accent hover:bg-accent-hover px-4 py-2 text-sm font-medium text-accent-ink">
+                    Start
+                </button>
+                <button type="button" wire:click="delete" wire:confirm="Delete this draft giveaway? This cannot be undone."
+                        class="rounded-pill border border-line text-danger hover:bg-danger/10 px-4 py-2 text-sm font-medium">
+                    Delete
+                </button>
+            @endif
+            <button type="button" wire:click="toggleCreateForm" class="rounded-pill bg-accent hover:bg-accent-hover px-4 py-2 text-sm font-medium text-accent-ink">
+                {{ $showCreateForm ? 'Cancel' : '+ New giveaway' }}
+            </button>
+        </div>
     </div>
 
-    @if ($showCreateForm)
-        <livewire:giveaways.create-giveaway :guild="$guild" :key="'create-giveaway-'.$guild->id" />
-    @endif
-
-    <x-list-detail-shell :selected="$selectedGiveaway !== null">
+    <x-list-detail-shell :selected="$selectedGiveaway !== null || $showCreateForm">
         <x-slot:list>
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 @forelse ($giveaways as $giveaway)
@@ -62,7 +75,11 @@
         </x-slot:list>
 
         <x-slot:detail>
-            @if ($selectedGiveaway)
+            @if ($showCreateForm)
+                <livewire:giveaways.create-giveaway :guild="$guild" :key="'create-giveaway-'.$guild->id" />
+            @elseif ($editing && $selectedGiveaway)
+                <livewire:giveaways.edit-giveaway :giveaway="$selectedGiveaway" :key="'edit-giveaway-'.$selectedGiveaway->id" />
+            @elseif ($selectedGiveaway)
                 <livewire:giveaways.giveaway-dashboard :giveaway="$selectedGiveaway" :key="'giveaway-detail-'.$selectedGiveaway->id" />
             @endif
         </x-slot:detail>

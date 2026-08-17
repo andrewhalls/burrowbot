@@ -1,16 +1,27 @@
 <div class="space-y-6">
-    <div class="flex items-center justify-between">
+    <div class="flex items-center justify-between gap-2">
         <h2 class="text-lg font-semibold">Events</h2>
-        <button type="button" wire:click="$toggle('showCreateForm')" class="rounded-pill bg-accent hover:bg-accent-hover px-4 py-2 text-sm font-medium text-accent-ink">
-            {{ $showCreateForm ? 'Cancel' : '+ New event' }}
-        </button>
+        <div class="flex items-center gap-2">
+            @error('delete') <p class="text-xs text-danger">{{ $message }}</p> @enderror
+            @if ($selectedEvent && ! $selectedOccurrence && ! $showCreateForm)
+                <button type="button" wire:click="toggleEdit"
+                        class="rounded-pill bg-surface-hover hover:bg-line px-4 py-2 text-sm font-medium text-ink">
+                    {{ $editing ? 'Cancel' : 'Edit' }}
+                </button>
+                @if ($selectedEvent->isDeletable())
+                    <button type="button" wire:click="delete" wire:confirm="Delete this event? This cannot be undone."
+                            class="rounded-pill border border-line text-danger hover:bg-danger/10 px-4 py-2 text-sm font-medium">
+                        Delete
+                    </button>
+                @endif
+            @endif
+            <button type="button" wire:click="toggleCreateForm" class="rounded-pill bg-accent hover:bg-accent-hover px-4 py-2 text-sm font-medium text-accent-ink">
+                {{ $showCreateForm ? 'Cancel' : '+ New event' }}
+            </button>
+        </div>
     </div>
 
-    @if ($showCreateForm)
-        <livewire:events.create-event :guild="$guild" :key="'create-event-'.$guild->id" />
-    @endif
-
-    <x-list-detail-shell :selected="$selectedEvent !== null">
+    <x-list-detail-shell :selected="$selectedEvent !== null || $showCreateForm">
         <x-slot:list>
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 @forelse ($events as $event)
@@ -58,24 +69,17 @@
         </x-slot:list>
 
         <x-slot:detail>
-            @if ($selectedOccurrence)
+            @if ($showCreateForm)
+                <livewire:events.create-event :guild="$guild" :key="'create-event-'.$guild->id" />
+            @elseif ($selectedOccurrence)
                 <div>
                     <button type="button" wire:click="deselectOccurrence" class="mb-3 text-sm text-muted hover:text-ink">&larr; Back to {{ $selectedEvent->title }}</button>
                     <livewire:events.occurrence-roster :occurrence="$selectedOccurrence" :key="'occurrence-roster-'.$selectedOccurrence->id" />
                 </div>
+            @elseif ($editing && $selectedEvent)
+                <livewire:events.edit-event :event="$selectedEvent" :key="'edit-event-'.$selectedEvent->id" />
             @elseif ($selectedEvent)
-                <div class="flex justify-end mb-3">
-                    <button type="button" wire:click="toggleEdit"
-                            class="rounded-pill bg-surface-hover hover:bg-line px-4 py-2 text-sm font-medium text-ink">
-                        {{ $editing ? 'Cancel' : 'Edit' }}
-                    </button>
-                </div>
-
-                @if ($editing)
-                    <livewire:events.edit-event :event="$selectedEvent" :key="'edit-event-'.$selectedEvent->id" />
-                @else
-                    @include('livewire.events.partials.event-summary', ['event' => $selectedEvent])
-                @endif
+                @include('livewire.events.partials.event-summary', ['event' => $selectedEvent])
             @endif
         </x-slot:detail>
     </x-list-detail-shell>

@@ -30,6 +30,107 @@ it('shows who created a standard giveaway when known', function () {
         ->assertSee('Created by Ada Admin');
 });
 
+it('deletes a series with no posted occurrences', function () {
+    $guild = Guild::factory()->create();
+    $giveaway = StandardGiveaway::factory()->for($guild)->create();
+    $staff = actingEventStaffFor($guild);
+
+    Livewire::actingAs($staff)
+        ->test(StandardGiveawayIndex::class, ['guild' => $guild])
+        ->call('select', $giveaway->id)
+        ->call('delete')
+        ->assertSet('selectedId', null);
+
+    expect(StandardGiveaway::query()->find($giveaway->id))->toBeNull();
+});
+
+it('does not offer delete, and rejects it server-side, once a series has a posted occurrence', function () {
+    $guild = Guild::factory()->create();
+    $giveaway = StandardGiveaway::factory()->for($guild)->create();
+    StandardGiveawayOccurrence::factory()->for($giveaway, 'standardGiveaway')->posted()->create();
+    $staff = actingEventStaffFor($guild);
+
+    Livewire::actingAs($staff)
+        ->test(StandardGiveawayIndex::class, ['guild' => $guild])
+        ->call('select', $giveaway->id)
+        ->assertDontSeeHtml('wire:click="delete"')
+        ->call('delete')
+        ->assertHasErrors('delete');
+
+    expect(StandardGiveaway::query()->find($giveaway->id))->not->toBeNull();
+});
+
+it('shows an upcoming occurrences list only when the series has scheduled occurrences', function () {
+    $guild = Guild::factory()->create();
+    $giveaway = StandardGiveaway::factory()->for($guild)->create();
+    $staff = actingEventStaffFor($guild);
+
+    Livewire::actingAs($staff)
+        ->test(StandardGiveawayIndex::class, ['guild' => $guild])
+        ->call('select', $giveaway->id)
+        ->assertDontSee('Upcoming occurrences');
+
+    $occurrence = StandardGiveawayOccurrence::factory()->for($giveaway, 'standardGiveaway')->create([
+        'status' => StandardGiveawayOccurrence::STATUS_SCHEDULED,
+        'description' => 'Next week\'s prize',
+        'scheduled_post_at' => now()->addWeek(),
+    ]);
+
+    Livewire::actingAs($staff)
+        ->test(StandardGiveawayIndex::class, ['guild' => $guild])
+        ->call('select', $giveaway->id)
+        ->assertSee('Upcoming occurrences')
+        ->assertSee('Next week\'s prize');
+});
+
+it('toggles into and out of editing a specific upcoming occurrence', function () {
+    $guild = Guild::factory()->create();
+    $giveaway = StandardGiveaway::factory()->for($guild)->create();
+    $occurrence = StandardGiveawayOccurrence::factory()->for($giveaway, 'standardGiveaway')->create([
+        'status' => StandardGiveawayOccurrence::STATUS_SCHEDULED,
+        'scheduled_post_at' => now()->addWeek(),
+    ]);
+    $staff = actingEventStaffFor($guild);
+
+    Livewire::actingAs($staff)
+        ->test(StandardGiveawayIndex::class, ['guild' => $guild])
+        ->call('select', $giveaway->id)
+        ->assertDontSeeLivewire('standard-giveaways.edit-standard-giveaway-occurrence')
+        ->call('toggleEditOccurrence', $occurrence->id)
+        ->assertSeeLivewire('standard-giveaways.edit-standard-giveaway-occurrence')
+        ->call('toggleEditOccurrence', $occurrence->id)
+        ->assertDontSeeLivewire('standard-giveaways.edit-standard-giveaway-occurrence');
+});
+
+it('refuses to edit a posted occurrence directly, and closes an open occurrence edit on reselect', function () {
+    $guild = Guild::factory()->create();
+    $giveaway = StandardGiveaway::factory()->for($guild)->create();
+    $scheduled = StandardGiveawayOccurrence::factory()->for($giveaway, 'standardGiveaway')->create([
+        'status' => StandardGiveawayOccurrence::STATUS_SCHEDULED,
+        'scheduled_post_at' => now()->addWeek(),
+    ]);
+    $posted = StandardGiveawayOccurrence::factory()->for($giveaway, 'standardGiveaway')->posted()->create([
+        'scheduled_post_at' => now()->subWeek(),
+    ]);
+    $staff = actingEventStaffFor($guild);
+
+    expect(fn () => Livewire::actingAs($staff)
+        ->test(StandardGiveawayIndex::class, ['guild' => $guild])
+        ->call('select', $giveaway->id)
+        ->call('toggleEditOccurrence', $posted->id))
+        ->toThrow(Illuminate\Database\Eloquent\ModelNotFoundException::class);
+
+    $component = Livewire::actingAs($staff)
+        ->test(StandardGiveawayIndex::class, ['guild' => $guild])
+        ->call('select', $giveaway->id)
+        ->call('toggleEditOccurrence', $scheduled->id)
+        ->assertSeeLivewire('standard-giveaways.edit-standard-giveaway-occurrence');
+
+    $component->call('select', $giveaway->id)
+        ->assertSet('editingOccurrenceId', null)
+        ->assertDontSeeLivewire('standard-giveaways.edit-standard-giveaway-occurrence');
+});
+
 it('toggles into and out of the edit series form for the selected giveaway', function () {
     $guild = Guild::factory()->create();
     $giveaway = StandardGiveaway::factory()->for($guild)->create();
@@ -128,6 +229,38 @@ it('refuses to select a standard giveaway belonging to a different guild', funct
         ->test(StandardGiveawayIndex::class, ['guild' => $guild])
         ->call('select', $otherGiveaway->id)
         ->assertSee('Select an item from the list');
+});
+
+it('opening the create form deselects the current giveaway, and selecting a tile closes the create form', function () {
+    $guild = Guild::factory()->create();
+    $giveaway = StandardGiveaway::factory()->for($guild)->create();
+    $staff = actingEventStaffFor($guild);
+
+    $component = Livewire::actingAs($staff)
+        ->test(StandardGiveawayIndex::class, ['guild' => $guild])
+        ->call('select', $giveaway->id)
+        ->call('toggleCreateForm');
+
+    $component->assertSet('selectedId', null)
+        ->assertSeeLivewire('standard-giveaways.create-standard-giveaway');
+
+    $component->call('select', $giveaway->id)
+        ->assertSet('showCreateForm', false)
+        ->assertDontSeeLivewire('standard-giveaways.create-standard-giveaway');
+});
+
+it('selects the newly created giveaway after submitting the create form', function () {
+    $guild = Guild::factory()->create();
+    $staff = actingEventStaffFor($guild);
+
+    $component = Livewire::actingAs($staff)->test(StandardGiveawayIndex::class, ['guild' => $guild]);
+    $component->call('toggleCreateForm');
+
+    $giveaway = StandardGiveaway::factory()->for($guild)->create();
+    $component->dispatch('standard-giveaway-created', giveawayId: $giveaway->id);
+
+    $component->assertSet('showCreateForm', false)
+        ->assertSet('selectedId', $giveaway->id);
 });
 
 it('denies mounting for a guild the user does not admin', function () {
