@@ -7,12 +7,13 @@ use App\Models\DiscordOutboundAction;
 use App\Models\StandardGiveaway;
 use App\Models\StandardGiveawayOccurrence;
 
-it('enqueues a post_standard_giveaway_message action and stamps posted_at/ends_at', function () {
+it('enqueues a post_standard_giveaway_message action and stamps posted_at/ends_at for a due occurrence', function () {
     $item = CollectionThemeItem::factory()->create(['name' => 'Nitro Code']);
     $occurrence = StandardGiveawayOccurrence::factory()->create([
         'posting_mode' => StandardGiveaway::POSTING_MODE_MESSAGE,
         'duration_minutes' => 120,
         'prize_item_ids' => [$item->id],
+        'scheduled_post_at' => now()->subMinute(),
     ]);
 
     $this->artisan('standard-giveaways:post-due-occurrences')->assertSuccessful();
@@ -29,7 +30,7 @@ it('enqueues a post_standard_giveaway_message action and stamps posted_at/ends_a
 });
 
 it('includes the image url in the outbound action payload when set', function () {
-    $occurrence = StandardGiveawayOccurrence::factory()->withImage('standard-giveaway-images/abc.jpg')->create();
+    $occurrence = StandardGiveawayOccurrence::factory()->withImage('standard-giveaway-images/abc.jpg')->create(['scheduled_post_at' => now()->subMinute()]);
 
     $this->artisan('standard-giveaways:post-due-occurrences');
 
@@ -38,7 +39,7 @@ it('includes the image url in the outbound action payload when set', function ()
 });
 
 it('leaves image_url null when the occurrence has no image', function () {
-    $occurrence = StandardGiveawayOccurrence::factory()->create();
+    $occurrence = StandardGiveawayOccurrence::factory()->create(['scheduled_post_at' => now()->subMinute()]);
 
     $this->artisan('standard-giveaways:post-due-occurrences');
 
@@ -46,8 +47,29 @@ it('leaves image_url null when the occurrence has no image', function () {
     expect($action->payload['image_url'])->toBeNull();
 });
 
-it('enqueues a post_standard_giveaway_thread action for a thread-mode occurrence', function () {
-    $occurrence = StandardGiveawayOccurrence::factory()->create(['posting_mode' => StandardGiveaway::POSTING_MODE_THREAD]);
+it('includes the banner image url in the outbound action payload when set', function () {
+    $occurrence = StandardGiveawayOccurrence::factory()->withBannerImage('standard-giveaway-images/banner.jpg')->create(['scheduled_post_at' => now()->subMinute()]);
+
+    $this->artisan('standard-giveaways:post-due-occurrences');
+
+    $action = DiscordOutboundAction::query()->where('standard_giveaway_occurrence_id', $occurrence->id)->first();
+    expect($action->payload['banner_image_url'])->toContain('standard-giveaway-images/banner.jpg');
+});
+
+it('leaves banner_image_url null when the occurrence has no banner image', function () {
+    $occurrence = StandardGiveawayOccurrence::factory()->create(['scheduled_post_at' => now()->subMinute()]);
+
+    $this->artisan('standard-giveaways:post-due-occurrences');
+
+    $action = DiscordOutboundAction::query()->where('standard_giveaway_occurrence_id', $occurrence->id)->first();
+    expect($action->payload['banner_image_url'])->toBeNull();
+});
+
+it('enqueues a post_standard_giveaway_thread action for a due thread-mode occurrence', function () {
+    $occurrence = StandardGiveawayOccurrence::factory()->create([
+        'posting_mode' => StandardGiveaway::POSTING_MODE_THREAD,
+        'scheduled_post_at' => now()->subMinute(),
+    ]);
 
     $this->artisan('standard-giveaways:post-due-occurrences');
 
@@ -61,4 +83,13 @@ it('does not re-post an already-posted occurrence', function () {
     $this->artisan('standard-giveaways:post-due-occurrences');
 
     expect(DiscordOutboundAction::query()->where('standard_giveaway_occurrence_id', $occurrence->id)->count())->toBe(0);
+});
+
+it('does not post a scheduled occurrence whose post time has not arrived yet', function () {
+    $occurrence = StandardGiveawayOccurrence::factory()->create(['scheduled_post_at' => now()->addWeek()]);
+
+    $this->artisan('standard-giveaways:post-due-occurrences');
+
+    expect(DiscordOutboundAction::query()->where('standard_giveaway_occurrence_id', $occurrence->id)->count())->toBe(0)
+        ->and($occurrence->fresh()->status)->toBe(StandardGiveawayOccurrence::STATUS_SCHEDULED);
 });

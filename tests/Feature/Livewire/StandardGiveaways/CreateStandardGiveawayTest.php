@@ -228,6 +228,61 @@ it('creates a standard giveaway with an image', function () {
     expect($occurrence->image_path)->toBe($giveaway->image_path);
 });
 
+it('creates a standard giveaway with a banner image and claim/congrats fields', function () {
+    Storage::fake('public');
+
+    $guild = Guild::factory()->create();
+    $theme = CollectionTheme::factory()->for($guild)->withItems(1)->create();
+    $item = $theme->items->first();
+    $staff = actingEventStaffFor($guild);
+
+    Livewire::actingAs($staff)
+        ->test(CreateStandardGiveaway::class, ['guild' => $guild])
+        ->set('title', 'Booster Giveaway')
+        ->set('description', 'desc')
+        ->set('channelId', '123456')
+        ->set('bannerImage', UploadedFile::fake()->image('banner.jpg'))
+        ->set('claimLink', 'https://discord.com/channels/1/2')
+        ->set('claimDeadlineHours', 48)
+        ->set('congratsMessageTemplate', 'Congrats {winners}! You won {prize}.')
+        ->set('startDate', now()->addWeek()->toDateString())
+        ->set('startTime', '20:00')
+        ->call('addPrizeItem', $item->id)
+        ->call('save')
+        ->assertHasNoErrors();
+
+    $giveaway = StandardGiveaway::query()->where('title', 'Booster Giveaway')->sole();
+    expect($giveaway->banner_image_path)->not->toBeNull()
+        ->and($giveaway->claim_link)->toBe('https://discord.com/channels/1/2')
+        ->and($giveaway->claim_deadline_hours)->toBe(48)
+        ->and($giveaway->congrats_message_template)->toBe('Congrats {winners}! You won {prize}.');
+    Storage::disk('public')->assertExists($giveaway->banner_image_path);
+});
+
+it('leaves banner image and claim/congrats fields null when left blank', function () {
+    $guild = Guild::factory()->create();
+    $theme = CollectionTheme::factory()->for($guild)->withItems(1)->create();
+    $item = $theme->items->first();
+    $staff = actingEventStaffFor($guild);
+
+    Livewire::actingAs($staff)
+        ->test(CreateStandardGiveaway::class, ['guild' => $guild])
+        ->set('title', 'Plain Giveaway')
+        ->set('description', 'desc')
+        ->set('channelId', '123456')
+        ->set('startDate', now()->addWeek()->toDateString())
+        ->set('startTime', '20:00')
+        ->call('addPrizeItem', $item->id)
+        ->call('save')
+        ->assertHasNoErrors();
+
+    $giveaway = StandardGiveaway::query()->where('title', 'Plain Giveaway')->sole();
+    expect($giveaway->banner_image_path)->toBeNull()
+        ->and($giveaway->claim_link)->toBeNull()
+        ->and($giveaway->claim_deadline_hours)->toBeNull()
+        ->and($giveaway->congrats_message_template)->toBeNull();
+});
+
 it('surfaces search results for prize items scoped to the guild', function () {
     $guild = Guild::factory()->create();
     $theme = CollectionTheme::factory()->for($guild)->withItems(0)->create();

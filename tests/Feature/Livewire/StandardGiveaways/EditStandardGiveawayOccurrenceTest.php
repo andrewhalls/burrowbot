@@ -8,6 +8,8 @@ use App\Models\Guild;
 use App\Models\StandardGiveaway;
 use App\Models\StandardGiveawayOccurrence;
 use App\Models\User;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Storage;
 use Livewire\Livewire;
 
 it('pre-fills the form from the occurrence', function () {
@@ -47,6 +49,38 @@ it('saves description and prize item changes scoped to this occurrence', functio
 
     expect($occurrence->fresh()->description)->toBe('New description')
         ->and($occurrence->fresh()->prize_item_ids)->toBe([$item->id]);
+});
+
+it('sets an image on the occurrence, keeping the previous one when not replaced', function () {
+    Storage::fake('public');
+
+    $guild = Guild::factory()->create();
+    $giveaway = StandardGiveaway::factory()->for($guild)->create();
+    $item = CollectionThemeItem::factory()->create();
+    $occurrence = StandardGiveawayOccurrence::factory()->for($giveaway, 'standardGiveaway')->create([
+        'status' => StandardGiveawayOccurrence::STATUS_SCHEDULED,
+        'prize_item_ids' => [$item->id],
+    ]);
+    $staff = actingEventStaffFor($guild);
+
+    Livewire::actingAs($staff)
+        ->test(EditStandardGiveawayOccurrence::class, ['occurrence' => $occurrence])
+        ->set('description', 'This week')
+        ->set('image', UploadedFile::fake()->image('occurrence.jpg'))
+        ->call('save')
+        ->assertHasNoErrors();
+
+    $imagePath = $occurrence->fresh()->image_path;
+    expect($imagePath)->not->toBeNull();
+    Storage::disk('public')->assertExists($imagePath);
+
+    Livewire::actingAs($staff)
+        ->test(EditStandardGiveawayOccurrence::class, ['occurrence' => $occurrence->fresh()])
+        ->set('description', 'This week, updated')
+        ->call('save')
+        ->assertHasNoErrors();
+
+    expect($occurrence->fresh()->image_path)->toBe($imagePath);
 });
 
 it('requires at least one prize item', function () {

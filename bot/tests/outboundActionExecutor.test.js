@@ -58,9 +58,9 @@ describe('executeOutboundAction', () => {
     expect(result).toEqual({ discordMessageId: 'msg-2' })
   })
 
-  it('calls postStandardGiveawayThread for a post_standard_giveaway_thread action and returns the thread id', async () => {
+  it('calls postStandardGiveawayThread for a post_standard_giveaway_thread action and returns the thread and message ids', async () => {
     const adapter = {
-      postStandardGiveawayThread: vi.fn().mockResolvedValue({ discordThreadId: 'thread-2' }),
+      postStandardGiveawayThread: vi.fn().mockResolvedValue({ discordThreadId: 'thread-2', discordMessageId: 'msg-in-thread' }),
       postStandardGiveawayMessage: vi.fn(),
       announceStandardGiveawayWinners: vi.fn(),
     }
@@ -70,7 +70,7 @@ describe('executeOutboundAction', () => {
 
     expect(adapter.postStandardGiveawayThread).toHaveBeenCalledWith(action.payload)
     expect(adapter.postStandardGiveawayMessage).not.toHaveBeenCalled()
-    expect(result).toEqual({ discordThreadId: 'thread-2' })
+    expect(result).toEqual({ discordThreadId: 'thread-2', discordMessageId: 'msg-in-thread' })
   })
 
   it('calls postStandardGiveawayMessage for a post_standard_giveaway_message action and returns the message id', async () => {

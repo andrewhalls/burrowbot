@@ -28,6 +28,7 @@ class StandardGiveawayOccurrence extends Model
         'title',
         'description',
         'image_path',
+        'banner_image_path',
         'channel_id',
         'posting_mode',
         'requires_booster',
@@ -35,6 +36,9 @@ class StandardGiveawayOccurrence extends Model
         'duration_minutes',
         'prize_item_ids',
         'required_role_ids',
+        'claim_link',
+        'claim_deadline_hours',
+        'congrats_message_template',
         'scheduled_post_at',
         'status',
         'posted_at',
@@ -51,6 +55,7 @@ class StandardGiveawayOccurrence extends Model
             'duration_minutes' => 'integer',
             'prize_item_ids' => 'array',
             'required_role_ids' => 'array',
+            'claim_deadline_hours' => 'integer',
             'scheduled_post_at' => 'datetime',
             'posted_at' => 'datetime',
             'ends_at' => 'datetime',
@@ -64,6 +69,16 @@ class StandardGiveawayOccurrence extends Model
     {
         return Attribute::make(
             get: fn () => $this->image_path ? Storage::disk('public')->url($this->image_path) : null,
+        );
+    }
+
+    /**
+     * @return Attribute<string|null, never>
+     */
+    protected function bannerImageUrl(): Attribute
+    {
+        return Attribute::make(
+            get: fn () => $this->banner_image_path ? Storage::disk('public')->url($this->banner_image_path) : null,
         );
     }
 

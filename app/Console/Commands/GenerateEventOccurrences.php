@@ -23,7 +23,7 @@ use Illuminate\Console\Command;
 #[Description('Generate upcoming occurrences for active recurring events within a rolling window.')]
 class GenerateEventOccurrences extends Command
 {
-    private const WINDOW_DAYS = 30;
+    private const WINDOW_DAYS = 90;
 
     public function handle(ExpandRecurrenceRule $expandRecurrenceRule): int
     {

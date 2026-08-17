@@ -21,7 +21,7 @@ The system SHALL generate exactly one occurrence for a non-recurring standard gi
 - **THEN** exactly one occurrence exists for it, now and after any later occurrence-generation run
 
 ### Requirement: Posting an occurrence to Discord
-The system SHALL post each occurrence to Discord according to its giveaway's posting mode: as a new Discord thread in the configured channel, or as a new plain message in the configured channel, containing the prize item(s), the eligibility restriction (if any), the end time, the giveaway's image (if set), and an "Enter" control.
+The system SHALL post each occurrence to Discord according to its giveaway's posting mode: as a new Discord thread in the configured channel, or as a new plain message in the configured channel, containing the prize item(s), the eligibility restriction (if any), the end time, the giveaway's image (if set), and an "Enter" control. An occurrence SHALL NOT be posted before its scheduled time arrives.
 
 #### Scenario: Occurrence posted with prize and restriction visible
 - **WHEN** an occurrence is due to be posted
@@ -30,6 +30,10 @@ The system SHALL post each occurrence to Discord according to its giveaway's pos
 #### Scenario: Occurrence posted with an image
 - **WHEN** an occurrence whose giveaway has an image is due to be posted
 - **THEN** the system requests the bot include that image in the posted message/thread
+
+#### Scenario: Occurrence not yet due is left scheduled
+- **WHEN** a `scheduled` occurrence's scheduled post time has not yet arrived
+- **THEN** the system does not post it, and it remains `scheduled`
 
 ### Requirement: Independent entrant list per occurrence
 The system SHALL treat each occurrence's entrants as wholly independent of every other occurrence of the same standard giveaway series.
@@ -65,11 +69,15 @@ The system SHALL, when a standard giveaway has more than one prize item, assign 
 - **THEN** every winner still receives an item, with items repeating once the pool is exhausted
 
 ### Requirement: Editing a single upcoming occurrence
-The system SHALL let a guild admin edit a single `scheduled` occurrence's description and prize items, independent of its series and every other occurrence, and SHALL reject editing once that occurrence is no longer `scheduled`.
+The system SHALL let a guild admin edit a single `scheduled` occurrence's description, prize items, and image, independent of its series and every other occurrence, and SHALL reject editing once that occurrence is no longer `scheduled`.
 
 #### Scenario: Editing a scheduled occurrence's description and prize items
 - **WHEN** a guild admin edits a `scheduled` occurrence's description and/or prize items
 - **THEN** the system saves the change against that occurrence only - the series' own template and every other occurrence (already generated or generated later) are unaffected
+
+#### Scenario: Editing a scheduled occurrence's image
+- **WHEN** a guild admin uploads a new image for a `scheduled` occurrence
+- **THEN** the system records that image against that occurrence only
 
 #### Scenario: Editing rejected once posted
 - **WHEN** a guild admin attempts to edit an occurrence that is `posted` or `closed`

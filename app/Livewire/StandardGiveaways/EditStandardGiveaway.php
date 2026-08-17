@@ -42,6 +42,14 @@ class EditStandardGiveaway extends Component
 
     public mixed $image = null;
 
+    public mixed $bannerImage = null;
+
+    public string $claimLink = '';
+
+    public ?int $claimDeadlineHours = null;
+
+    public string $congratsMessageTemplate = '';
+
     public string $channelId = '';
 
     public string $postingMode = StandardGiveaway::POSTING_MODE_MESSAGE;
@@ -92,6 +100,9 @@ class EditStandardGiveaway extends Component
         $this->winnerCount = $giveaway->winner_count;
         $this->requiresBooster = $giveaway->requires_booster;
         $this->durationMinutes = $giveaway->duration_minutes;
+        $this->claimLink = $giveaway->claim_link ?? '';
+        $this->claimDeadlineHours = $giveaway->claim_deadline_hours;
+        $this->congratsMessageTemplate = $giveaway->congrats_message_template ?? '';
         $this->selectedPrizeItemIds = $giveaway->prizeItems->pluck('collection_theme_item_id')->all();
         $this->selectedRoleIds = $giveaway->requiredRoles->pluck('discord_role_id')->all();
 
@@ -196,6 +207,10 @@ class EditStandardGiveaway extends Component
             'title' => ['required', 'string', 'max:255'],
             'description' => ['required', 'string'],
             'image' => ['nullable', 'image', 'max:5120'],
+            'bannerImage' => ['nullable', 'image', 'max:5120'],
+            'claimLink' => ['nullable', 'string', 'max:500'],
+            'claimDeadlineHours' => ['nullable', 'integer', 'min:1'],
+            'congratsMessageTemplate' => ['nullable', 'string'],
             'channelId' => ['required', 'string'],
             'postingMode' => ['required', 'in:'.StandardGiveaway::POSTING_MODE_THREAD.','.StandardGiveaway::POSTING_MODE_MESSAGE],
             'winnerCount' => ['required', 'integer', 'min:1'],
@@ -232,16 +247,21 @@ class EditStandardGiveaway extends Component
         }
 
         $imagePath = $this->image?->store('standard-giveaway-images', 'public') ?? $this->giveaway->image_path;
+        $bannerImagePath = $this->bannerImage?->store('standard-giveaway-images', 'public') ?? $this->giveaway->banner_image_path;
 
         $this->giveaway = $updateGiveaway->execute($this->giveaway, [
             'title' => $validated['title'],
             'description' => $validated['description'],
             'image_path' => $imagePath,
+            'banner_image_path' => $bannerImagePath,
             'channel_id' => $validated['channelId'],
             'posting_mode' => $validated['postingMode'],
             'winner_count' => $validated['winnerCount'],
             'requires_booster' => $this->requiresBooster,
             'duration_minutes' => $validated['durationMinutes'],
+            'claim_link' => $validated['claimLink'] !== '' ? $validated['claimLink'] : null,
+            'claim_deadline_hours' => $validated['claimDeadlineHours'],
+            'congrats_message_template' => $validated['congratsMessageTemplate'] !== '' ? $validated['congratsMessageTemplate'] : null,
             'recurrence_rule' => $recurrenceRule,
             'recurrence_start_at' => $startAt,
             'recurrence_timezone' => $this->resolvedTimezone(),

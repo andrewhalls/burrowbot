@@ -11,10 +11,10 @@ use Illuminate\Console\Attributes\Signature;
 use Illuminate\Console\Command;
 
 /**
- * Finds `scheduled` occurrences and enqueues the outbound action that
- * posts them to Discord. v1 posts every scheduled occurrence immediately
- * (see design.md Decision 2 and its Open Question on post lead time) -
- * this command is where a future per-event lead time would be checked.
+ * Finds `scheduled` occurrences whose scheduled start time has arrived
+ * and enqueues the outbound action that posts them to Discord. This
+ * command is where a future per-event lead time (post N minutes/hours
+ * before the start time, rather than at it) would be checked.
  *
  * See openspec specs/event-occurrences - "Posting an occurrence to Discord".
  */
@@ -26,6 +26,7 @@ class PostDueEventOccurrences extends Command
     {
         $occurrences = EventOccurrence::query()
             ->where('status', EventOccurrence::STATUS_SCHEDULED)
+            ->where('scheduled_start_at', '<=', now())
             ->with('eventRoleSet.roles')
             ->get();
 

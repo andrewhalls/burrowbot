@@ -57,6 +57,60 @@ it('deletes the old image file once no occurrence references it anymore', functi
     Storage::disk('public')->assertMissing('standard-giveaway-images/old.jpg');
 });
 
+it('updates banner image and claim/congrats fields without touching existing occurrences', function () {
+    $giveaway = StandardGiveaway::factory()->create();
+    $occurrence = StandardGiveawayOccurrence::factory()->create([
+        'standard_giveaway_id' => $giveaway->id,
+        'claim_link' => 'old-link',
+        'claim_deadline_hours' => 24,
+        'congrats_message_template' => 'Old template',
+    ]);
+
+    (new UpdateStandardGiveawayAction)->execute($giveaway, [
+        'claim_link' => 'new-link',
+        'claim_deadline_hours' => 48,
+        'congrats_message_template' => 'New template {winners}',
+    ]);
+
+    expect($giveaway->fresh()->claim_link)->toBe('new-link')
+        ->and($giveaway->fresh()->claim_deadline_hours)->toBe(48)
+        ->and($giveaway->fresh()->congrats_message_template)->toBe('New template {winners}')
+        ->and($occurrence->fresh()->claim_link)->toBe('old-link')
+        ->and($occurrence->fresh()->claim_deadline_hours)->toBe(24)
+        ->and($occurrence->fresh()->congrats_message_template)->toBe('Old template');
+});
+
+it('leaves an already-generated occurrence\'s banner image unchanged and deletes the orphaned old banner file when replaced', function () {
+    Storage::fake('public');
+    Storage::disk('public')->put('standard-giveaway-images/old-banner.jpg', 'old-bytes');
+    Storage::disk('public')->put('standard-giveaway-images/new-banner.jpg', 'new-bytes');
+
+    $giveaway = StandardGiveaway::factory()->create(['banner_image_path' => 'standard-giveaway-images/old-banner.jpg']);
+    $occurrence = StandardGiveawayOccurrence::factory()->create([
+        'standard_giveaway_id' => $giveaway->id,
+        'banner_image_path' => 'standard-giveaway-images/old-banner.jpg',
+    ]);
+
+    (new UpdateStandardGiveawayAction)->execute($giveaway, ['banner_image_path' => 'standard-giveaway-images/new-banner.jpg']);
+
+    expect($giveaway->fresh()->banner_image_path)->toBe('standard-giveaway-images/new-banner.jpg')
+        ->and($occurrence->fresh()->banner_image_path)->toBe('standard-giveaway-images/old-banner.jpg');
+
+    Storage::disk('public')->assertExists('standard-giveaway-images/old-banner.jpg');
+});
+
+it('deletes the old banner image file once no occurrence references it anymore', function () {
+    Storage::fake('public');
+    Storage::disk('public')->put('standard-giveaway-images/old-banner.jpg', 'old-bytes');
+    Storage::disk('public')->put('standard-giveaway-images/new-banner.jpg', 'new-bytes');
+
+    $giveaway = StandardGiveaway::factory()->create(['banner_image_path' => 'standard-giveaway-images/old-banner.jpg']);
+
+    (new UpdateStandardGiveawayAction)->execute($giveaway, ['banner_image_path' => 'standard-giveaway-images/new-banner.jpg']);
+
+    Storage::disk('public')->assertMissing('standard-giveaway-images/old-banner.jpg');
+});
+
 it('replaces the prize item set when prize_item_ids is present', function () {
     $giveaway = StandardGiveaway::factory()->create();
     $oldItem = CollectionThemeItem::factory()->create();

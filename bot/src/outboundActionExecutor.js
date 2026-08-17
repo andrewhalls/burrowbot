@@ -10,7 +10,7 @@
  *   closeGiveawayMessage: (payload: object) => Promise<void>,
  *   postEventOccurrenceThread: (payload: object) => Promise<{ discordThreadId: string }>,
  *   postEventOccurrenceMessage: (payload: object) => Promise<{ discordMessageId: string }>,
- *   postStandardGiveawayThread: (payload: object) => Promise<{ discordThreadId: string }>,
+ *   postStandardGiveawayThread: (payload: object) => Promise<{ discordThreadId: string, discordMessageId: string }>,
  *   postStandardGiveawayMessage: (payload: object) => Promise<{ discordMessageId: string }>,
  *   announceStandardGiveawayWinners: (payload: object) => Promise<void>,
  * }} adapter
@@ -38,9 +38,9 @@ export async function executeOutboundAction(action, adapter) {
       return { discordMessageId }
     }
     case 'post_standard_giveaway_thread': {
-      const { discordThreadId } = await adapter.postStandardGiveawayThread(action.payload)
+      const { discordThreadId, discordMessageId } = await adapter.postStandardGiveawayThread(action.payload)
 
-      return { discordThreadId }
+      return { discordThreadId, discordMessageId }
     }
     case 'post_standard_giveaway_message': {
       const { discordMessageId } = await adapter.postStandardGiveawayMessage(action.payload)

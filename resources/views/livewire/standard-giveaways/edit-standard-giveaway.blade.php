@@ -24,6 +24,17 @@
         @endif
     </div>
 
+    <div>
+        <label class="block text-sm text-muted mb-1">Banner image (optional)</label>
+        <input type="file" wire:model="bannerImage" accept="image/*" class="w-full rounded-control bg-surface border border-line px-3 py-2 text-sm">
+        @error('bannerImage') <p class="text-danger text-xs mt-1">{{ $message }}</p> @enderror
+        @if ($bannerImage && $bannerImage->isPreviewable())
+            <img src="{{ $bannerImage->temporaryUrl() }}" alt="Preview" class="mt-2 h-24 rounded-control object-cover">
+        @elseif ($giveaway->banner_image_url)
+            <img src="{{ $giveaway->banner_image_url }}" alt="Current banner" class="mt-2 h-24 rounded-control object-cover">
+        @endif
+    </div>
+
     <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <x-channel-picker :guild="$guild" model="channelId" :value="$channelId" />
         <div>
@@ -150,6 +161,30 @@
             <input type="number" min="1" wire:model="recurrenceEndCount" placeholder="Number of occurrences" class="w-full rounded-control bg-surface border border-line px-3 py-2 text-sm">
         @endif
     @endif
+
+    <div class="border-t border-line pt-4 space-y-3">
+        <h3 class="text-sm font-medium">Winner announcement (optional)</h3>
+
+        <div>
+            <label class="block text-sm text-muted mb-1">Claim link</label>
+            <input type="text" wire:model="claimLink" placeholder="https://... or a channel mention" class="w-full rounded-control bg-surface border border-line px-3 py-2 text-sm">
+            @error('claimLink') <p class="text-danger text-xs mt-1">{{ $message }}</p> @enderror
+        </div>
+
+        <div>
+            <label class="block text-sm text-muted mb-1">Claim deadline (hours)</label>
+            <input type="number" min="1" wire:model="claimDeadlineHours" class="w-full rounded-control bg-surface border border-line px-3 py-2 text-sm">
+            @error('claimDeadlineHours') <p class="text-danger text-xs mt-1">{{ $message }}</p> @enderror
+        </div>
+
+        <div>
+            <label class="block text-sm text-muted mb-1">Congratulations message template</label>
+            <textarea wire:model="congratsMessageTemplate" rows="4" placeholder="Congratulations {winners}! You won {prize}! Claim at {claim_link} by {claim_deadline}."
+                      class="w-full rounded-control bg-surface border border-line px-3 py-2 text-sm"></textarea>
+            <p class="text-xs text-muted mt-1">Placeholders: <code>{winners}</code>, <code>{prize}</code>, <code>{claim_link}</code>, <code>{claim_deadline}</code>. Leave blank to skip sending a winner announcement message.</p>
+            @error('congratsMessageTemplate') <p class="text-danger text-xs mt-1">{{ $message }}</p> @enderror
+        </div>
+    </div>
 
     <button type="button" wire:click="save" class="rounded-control bg-accent hover:bg-accent-hover px-4 py-2 text-sm font-medium text-accent-ink">
         Save changes

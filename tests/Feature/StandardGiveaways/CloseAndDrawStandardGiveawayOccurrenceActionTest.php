@@ -158,6 +158,86 @@ it('leaves item_image_url null when the won item has no image', function () {
     expect($action->payload['winners'][0]['item_image_url'])->toBeNull();
 });
 
+it('populates the announce-winners payload with content fields and a rendered congrats message when a template and winners exist', function () {
+    $theme = CollectionTheme::factory()->withItems(1)->create();
+    $item = $theme->items->first();
+    $occurrence = StandardGiveawayOccurrence::factory()
+        ->withBannerImage('standard-giveaway-images/banner.jpg')
+        ->ended()
+        ->create([
+            'winner_count' => 1,
+            'prize_item_ids' => [$item->id],
+            'claim_link' => 'https://discord.com/channels/1/2',
+            'claim_deadline_hours' => 48,
+            'congrats_message_template' => 'Congrats {winners}! You won {prize}. Claim at {claim_link} by {claim_deadline}.',
+        ]);
+    $member = DiscordMember::factory()->create(['discord_user_id' => '999']);
+    StandardGiveawayEntry::factory()->for($occurrence, 'standardGiveawayOccurrence')->for($member, 'discordMember')->create();
+
+    closeAndDrawAction()->execute($occurrence);
+
+    $action = DiscordOutboundAction::query()
+        ->where('standard_giveaway_occurrence_id', $occurrence->id)
+        ->where('type', DiscordOutboundAction::TYPE_ANNOUNCE_STANDARD_GIVEAWAY_WINNERS)
+        ->first();
+
+    expect($action->payload['title'])->toBe($occurrence->title)
+        ->and($action->payload['banner_image_url'])->toContain('standard-giveaway-images/banner.jpg')
+        ->and($action->payload['prize_item_names'])->toBe([$item->name])
+        ->and($action->payload['congrats_message'])->toContain('<@999>')
+        ->and($action->payload['congrats_message'])->toContain($item->name)
+        ->and($action->payload['congrats_message'])->toContain('https://discord.com/channels/1/2');
+
+    $claimDeadlineAt = \Illuminate\Support\Carbon::parse($action->payload['claim_deadline_at']);
+    $hoursFromNow = abs(now()->diffInHours($claimDeadlineAt, absolute: false));
+    expect($hoursFromNow)->toBeLessThanOrEqual(48)
+        ->and($hoursFromNow)->toBeGreaterThan(47);
+});
+
+it('leaves congrats_message null when the occurrence has no congrats_message_template', function () {
+    $occurrence = StandardGiveawayOccurrence::factory()->ended()->create(['winner_count' => 1, 'congrats_message_template' => null]);
+    StandardGiveawayEntry::factory()->for($occurrence, 'standardGiveawayOccurrence')->create();
+
+    closeAndDrawAction()->execute($occurrence);
+
+    $action = DiscordOutboundAction::query()
+        ->where('standard_giveaway_occurrence_id', $occurrence->id)
+        ->where('type', DiscordOutboundAction::TYPE_ANNOUNCE_STANDARD_GIVEAWAY_WINNERS)
+        ->first();
+
+    expect($action->payload['congrats_message'])->toBeNull();
+});
+
+it('leaves congrats_message null when there are zero winners, even with a template configured', function () {
+    $occurrence = StandardGiveawayOccurrence::factory()->ended()->create([
+        'winner_count' => 3,
+        'congrats_message_template' => 'Congrats {winners}!',
+    ]);
+
+    closeAndDrawAction()->execute($occurrence);
+
+    $action = DiscordOutboundAction::query()
+        ->where('standard_giveaway_occurrence_id', $occurrence->id)
+        ->where('type', DiscordOutboundAction::TYPE_ANNOUNCE_STANDARD_GIVEAWAY_WINNERS)
+        ->first();
+
+    expect($action->payload['congrats_message'])->toBeNull();
+});
+
+it('leaves claim_deadline_at null when the occurrence has no claim_deadline_hours', function () {
+    $occurrence = StandardGiveawayOccurrence::factory()->ended()->create(['winner_count' => 1, 'claim_deadline_hours' => null]);
+    StandardGiveawayEntry::factory()->for($occurrence, 'standardGiveawayOccurrence')->create();
+
+    closeAndDrawAction()->execute($occurrence);
+
+    $action = DiscordOutboundAction::query()
+        ->where('standard_giveaway_occurrence_id', $occurrence->id)
+        ->where('type', DiscordOutboundAction::TYPE_ANNOUNCE_STANDARD_GIVEAWAY_WINNERS)
+        ->first();
+
+    expect($action->payload['claim_deadline_at'])->toBeNull();
+});
+
 it('is idempotent - running twice does not double-draw', function () {
     $occurrence = StandardGiveawayOccurrence::factory()->ended()->create(['winner_count' => 1]);
     StandardGiveawayEntry::factory()->for($occurrence, 'standardGiveawayOccurrence')->create();

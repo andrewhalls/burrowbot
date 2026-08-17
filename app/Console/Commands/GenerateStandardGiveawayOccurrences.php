@@ -25,7 +25,7 @@ use Illuminate\Console\Command;
 #[Description('Generate upcoming occurrences for active recurring standard giveaways within a rolling window.')]
 class GenerateStandardGiveawayOccurrences extends Command
 {
-    private const WINDOW_DAYS = 30;
+    private const WINDOW_DAYS = 90;
 
     public function handle(ExpandRecurrenceRule $expandRecurrenceRule): int
     {
@@ -56,6 +56,7 @@ class GenerateStandardGiveawayOccurrences extends Command
                         'title' => $giveaway->title,
                         'description' => $giveaway->description,
                         'image_path' => $giveaway->image_path,
+                        'banner_image_path' => $giveaway->banner_image_path,
                         'channel_id' => $giveaway->channel_id,
                         'posting_mode' => $giveaway->posting_mode,
                         'requires_booster' => $giveaway->requires_booster,
@@ -63,6 +64,9 @@ class GenerateStandardGiveawayOccurrences extends Command
                         'duration_minutes' => $giveaway->duration_minutes,
                         'prize_item_ids' => $giveaway->prizeItems->pluck('collection_theme_item_id')->all(),
                         'required_role_ids' => $giveaway->requiredRoles->pluck('discord_role_id')->all(),
+                        'claim_link' => $giveaway->claim_link,
+                        'claim_deadline_hours' => $giveaway->claim_deadline_hours,
+                        'congrats_message_template' => $giveaway->congrats_message_template,
                         'status' => StandardGiveawayOccurrence::STATUS_SCHEDULED,
                     ],
                 );

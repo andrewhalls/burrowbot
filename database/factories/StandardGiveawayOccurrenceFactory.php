@@ -47,6 +47,20 @@ class StandardGiveawayOccurrenceFactory extends Factory
         return $this->state(['image_path' => $path]);
     }
 
+    public function withBannerImage(string $path): static
+    {
+        return $this->state(['banner_image_path' => $path]);
+    }
+
+    public function withClaimDetails(string $claimLink, int $claimDeadlineHours, string $congratsMessageTemplate): static
+    {
+        return $this->state([
+            'claim_link' => $claimLink,
+            'claim_deadline_hours' => $claimDeadlineHours,
+            'congrats_message_template' => $congratsMessageTemplate,
+        ]);
+    }
+
     public function fromGiveaway(StandardGiveaway $giveaway): static
     {
         return $this->state([
@@ -54,6 +68,7 @@ class StandardGiveawayOccurrenceFactory extends Factory
             'title' => $giveaway->title,
             'description' => $giveaway->description,
             'image_path' => $giveaway->image_path,
+            'banner_image_path' => $giveaway->banner_image_path,
             'channel_id' => $giveaway->channel_id,
             'posting_mode' => $giveaway->posting_mode,
             'requires_booster' => $giveaway->requires_booster,
@@ -61,6 +76,9 @@ class StandardGiveawayOccurrenceFactory extends Factory
             'duration_minutes' => $giveaway->duration_minutes,
             'prize_item_ids' => $giveaway->prizeItems()->pluck('collection_theme_item_id')->all(),
             'required_role_ids' => $giveaway->requiredRoles()->pluck('discord_role_id')->all(),
+            'claim_link' => $giveaway->claim_link,
+            'claim_deadline_hours' => $giveaway->claim_deadline_hours,
+            'congrats_message_template' => $giveaway->congrats_message_template,
         ]);
     }
 

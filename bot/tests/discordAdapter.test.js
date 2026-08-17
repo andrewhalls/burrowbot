@@ -8,6 +8,27 @@ function fakeClientWithChannel() {
   return { client, channel }
 }
 
+function fakeClientWithEditableMessage() {
+  const message = { edit: vi.fn().mockResolvedValue(undefined) }
+  const channel = {
+    send: vi.fn().mockResolvedValue({ id: 'msg-1' }),
+    messages: { fetch: vi.fn().mockResolvedValue(message) },
+  }
+  const client = { channels: { fetch: vi.fn().mockResolvedValue(channel) } }
+
+  return { client, channel, message }
+}
+
+const occurrencePayload = {
+  occurrence_id: 7,
+  title: 'Nitro Friday',
+  description: 'Weekly booster giveaway.',
+  ends_at: '2026-06-01T20:00:00Z',
+  requires_booster: false,
+  required_role_ids: [],
+  prize_item_names: ['Golden Coin'],
+}
+
 describe('createDiscordAdapter - postGiveawayMessage', () => {
   it('uses the default instructional line when no description is given', async () => {
     const { client, channel } = fakeClientWithChannel()
@@ -61,7 +82,59 @@ describe('createDiscordAdapter - postGiveawayMessage', () => {
 })
 
 describe('createDiscordAdapter - announceStandardGiveawayWinners', () => {
-  it('sends one embed per winner, with that winner\'s own item image, for a small winner count', async () => {
+  it('edits the original message in place when discord_message_id is present, rebuilding it from the payload', async () => {
+    const { client, channel, message } = fakeClientWithEditableMessage()
+    const adapter = createDiscordAdapter(client)
+    const winners = [{ discord_user_id: '1', display_name: 'Alice', item_id: 10, item_name: 'Joystick', item_image_url: null }]
+
+    await adapter.announceStandardGiveawayWinners({
+      ...occurrencePayload,
+      channel_id: '123',
+      discord_thread_id: null,
+      discord_message_id: 'original-msg',
+      winners,
+      congrats_message: null,
+    })
+
+    expect(channel.messages.fetch).toHaveBeenCalledWith('original-msg')
+    const editedPayload = message.edit.mock.calls[0][0]
+    expect(editedPayload.embeds[0].data.fields.find((f) => f.name === 'Winners').value).toContain('<@1> won **Joystick**')
+    expect(editedPayload.components).toHaveLength(0)
+  })
+
+  it('sends a new congrats message after editing, only when congrats_message is present', async () => {
+    const { client, channel } = fakeClientWithEditableMessage()
+    const adapter = createDiscordAdapter(client)
+
+    await adapter.announceStandardGiveawayWinners({
+      ...occurrencePayload,
+      channel_id: '123',
+      discord_thread_id: null,
+      discord_message_id: 'original-msg',
+      winners: [],
+      congrats_message: 'Congrats <@1>! You won Joystick.',
+    })
+
+    expect(channel.send).toHaveBeenCalledWith({ content: 'Congrats <@1>! You won Joystick.' })
+  })
+
+  it('skips the congrats message when congrats_message is null', async () => {
+    const { client, channel } = fakeClientWithEditableMessage()
+    const adapter = createDiscordAdapter(client)
+
+    await adapter.announceStandardGiveawayWinners({
+      ...occurrencePayload,
+      channel_id: '123',
+      discord_thread_id: null,
+      discord_message_id: 'original-msg',
+      winners: [],
+      congrats_message: null,
+    })
+
+    expect(channel.send).not.toHaveBeenCalled()
+  })
+
+  it('falls back to per-winner embeds when discord_message_id is absent', async () => {
     const { client, channel } = fakeClientWithChannel()
     const adapter = createDiscordAdapter(client)
     const winners = [
@@ -69,7 +142,14 @@ describe('createDiscordAdapter - announceStandardGiveawayWinners', () => {
       { discord_user_id: '2', display_name: 'Bob', item_id: 11, item_name: 'Cartridge', item_image_url: null },
     ]
 
-    await adapter.announceStandardGiveawayWinners({ channel_id: '123', discord_thread_id: null, winners })
+    await adapter.announceStandardGiveawayWinners({
+      ...occurrencePayload,
+      channel_id: '123',
+      discord_thread_id: null,
+      discord_message_id: null,
+      winners,
+      congrats_message: null,
+    })
 
     const embeds = channel.send.mock.calls[0][0].embeds
     expect(embeds).toHaveLength(2)
@@ -79,18 +159,25 @@ describe('createDiscordAdapter - announceStandardGiveawayWinners', () => {
     expect(embeds[1].data.image).toBeUndefined()
   })
 
-  it('falls back to a single combined embed when there are zero winners', async () => {
+  it('falls back to a single combined embed when there are zero winners and no discord_message_id', async () => {
     const { client, channel } = fakeClientWithChannel()
     const adapter = createDiscordAdapter(client)
 
-    await adapter.announceStandardGiveawayWinners({ channel_id: '123', discord_thread_id: null, winners: [] })
+    await adapter.announceStandardGiveawayWinners({
+      ...occurrencePayload,
+      channel_id: '123',
+      discord_thread_id: null,
+      discord_message_id: null,
+      winners: [],
+      congrats_message: null,
+    })
 
     const embeds = channel.send.mock.calls[0][0].embeds
     expect(embeds).toHaveLength(1)
     expect(embeds[0].data.description).toContain('No entrants')
   })
 
-  it('falls back to a single combined embed when the winner count exceeds 10', async () => {
+  it('falls back to a single combined embed when the winner count exceeds 10 and no discord_message_id', async () => {
     const { client, channel } = fakeClientWithChannel()
     const adapter = createDiscordAdapter(client)
     const winners = Array.from({ length: 11 }, (_, i) => ({
@@ -101,7 +188,14 @@ describe('createDiscordAdapter - announceStandardGiveawayWinners', () => {
       item_image_url: null,
     }))
 
-    await adapter.announceStandardGiveawayWinners({ channel_id: '123', discord_thread_id: null, winners })
+    await adapter.announceStandardGiveawayWinners({
+      ...occurrencePayload,
+      channel_id: '123',
+      discord_thread_id: null,
+      discord_message_id: null,
+      winners,
+      congrats_message: null,
+    })
 
     const embeds = channel.send.mock.calls[0][0].embeds
     expect(embeds).toHaveLength(1)

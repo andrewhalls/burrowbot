@@ -33,7 +33,8 @@ class UpdateStandardGiveawayAction
             $attributes,
             array_flip([
                 'title', 'description', 'channel_id', 'posting_mode', 'winner_count',
-                'requires_booster', 'duration_minutes', 'image_path',
+                'requires_booster', 'duration_minutes', 'image_path', 'banner_image_path',
+                'claim_link', 'claim_deadline_hours', 'congrats_message_template',
                 'recurrence_rule', 'recurrence_start_at', 'recurrence_timezone',
             ]),
         );
@@ -44,15 +45,17 @@ class UpdateStandardGiveawayAction
         // deleting unconditionally here would break "occurrences generated
         // before the change keep their original image" the moment a series
         // image is replaced (design.md Decision 2, revised during
-        // implementation).
-        $oldPath = $giveaway->image_path;
-        if (
-            array_key_exists('image_path', $scalarAttributes)
-            && $oldPath !== null
-            && $oldPath !== $scalarAttributes['image_path']
-            && ! StandardGiveawayOccurrence::query()->where('image_path', $oldPath)->exists()
-        ) {
-            Storage::disk('public')->delete($oldPath);
+        // implementation). Applies identically to banner_image_path.
+        foreach (['image_path', 'banner_image_path'] as $imageField) {
+            $oldPath = $giveaway->{$imageField};
+            if (
+                array_key_exists($imageField, $scalarAttributes)
+                && $oldPath !== null
+                && $oldPath !== $scalarAttributes[$imageField]
+                && ! StandardGiveawayOccurrence::query()->where($imageField, $oldPath)->exists()
+            ) {
+                Storage::disk('public')->delete($oldPath);
+            }
         }
 
         $giveaway->fill($scalarAttributes)->save();

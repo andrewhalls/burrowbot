@@ -44,6 +44,20 @@ class StandardGiveawayFactory extends Factory
         return $this->state(['image_path' => $path]);
     }
 
+    public function withBannerImage(string $path): static
+    {
+        return $this->state(['banner_image_path' => $path]);
+    }
+
+    public function withClaimDetails(string $claimLink, int $claimDeadlineHours, string $congratsMessageTemplate): static
+    {
+        return $this->state([
+            'claim_link' => $claimLink,
+            'claim_deadline_hours' => $claimDeadlineHours,
+            'congrats_message_template' => $congratsMessageTemplate,
+        ]);
+    }
+
     public function createdBy(User $user): static
     {
         return $this->state(['created_by_user_id' => $user->id]);

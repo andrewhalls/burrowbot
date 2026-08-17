@@ -63,4 +63,50 @@ describe('buildStandardGiveawayOccurrenceMessage', () => {
 
     expect(embedData.image).toBeUndefined()
   })
+
+  it('shows a pending Winners field on the live post', () => {
+    const message = buildStandardGiveawayOccurrenceMessage(payload)
+    const embedData = message.embeds[0].data
+
+    expect(embedData.fields.find((f) => f.name === 'Winners').value).toContain('Pending')
+  })
+
+  it('includes the Enter button and no footer on the live post', () => {
+    const message = buildStandardGiveawayOccurrenceMessage(payload)
+
+    expect(message.components).toHaveLength(1)
+    expect(message.embeds[0].data.footer).toBeUndefined()
+  })
+
+  it('omits the banner embed when banner_image_url is absent', () => {
+    const message = buildStandardGiveawayOccurrenceMessage(payload)
+
+    expect(message.embeds).toHaveLength(1)
+  })
+
+  it('prepends a banner embed when banner_image_url is present', () => {
+    const message = buildStandardGiveawayOccurrenceMessage({ ...payload, banner_image_url: 'https://example.test/banner.png' })
+
+    expect(message.embeds).toHaveLength(2)
+    expect(message.embeds[0].data.image.url).toBe('https://example.test/banner.png')
+    expect(message.embeds[1].data.title).toContain('Nitro Friday')
+  })
+
+  it('renders the drawn winners, drops the Enter button, and adds a footer when ended', () => {
+    const winners = [{ discord_user_id: '1', item_name: 'Golden Coin' }]
+    const message = buildStandardGiveawayOccurrenceMessage(payload, { winners, ended: true })
+    const embedData = message.embeds[0].data
+
+    expect(embedData.fields.find((f) => f.name === 'Winners').value).toContain('<@1> won **Golden Coin**')
+    expect(embedData.title).toContain('(Ended)')
+    expect(embedData.footer.text).toBe('ID: 7')
+    expect(message.components).toHaveLength(0)
+  })
+
+  it('shows "No winners this time." when closed with zero winners', () => {
+    const message = buildStandardGiveawayOccurrenceMessage(payload, { winners: [], ended: true })
+    const embedData = message.embeds[0].data
+
+    expect(embedData.fields.find((f) => f.name === 'Winners').value).toBe('No winners this time.')
+  })
 })

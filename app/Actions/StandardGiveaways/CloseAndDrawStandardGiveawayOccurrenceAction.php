@@ -11,6 +11,7 @@ use App\Models\StandardGiveawayOccurrence;
 use App\Models\StandardGiveawayWinner;
 use App\Support\Giveaways\AssignRandomItem;
 use App\Support\StandardGiveaways\DrawRandomWinners;
+use App\Support\StandardGiveaways\RenderCongratsMessage;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -19,17 +20,23 @@ use Illuminate\Support\Facades\DB;
  * SignUpForEventRoleAction), draws the configured number of winners from
  * eligible entrants, assigns each a prize item via the existing
  * AssignRandomItem (accumulating across this occurrence's winners only),
- * and enqueues the outbound action to announce them.
+ * and enqueues one outbound action that both edits the original live post
+ * (rebuilt from this payload's own snapshot fields) and, when the
+ * occurrence has a congrats_message_template and at least one winner,
+ * sends a separately-templated congratulations/claim message.
  *
  * See openspec specs/standard-giveaway-occurrences - "Automatic closing
  * and drawing at end time", "Fair prize assignment across multiple
- * winners"; design.md Decision 3.
+ * winners", "Winners and claim details shown on the closed occurrence",
+ * "Separate winner announcement message with claim details"; design.md
+ * Decisions 2, 3, 4.
  */
 class CloseAndDrawStandardGiveawayOccurrenceAction
 {
     public function __construct(
         private readonly DrawRandomWinners $drawRandomWinners,
         private readonly AssignRandomItem $assignRandomItem,
+        private readonly RenderCongratsMessage $renderCongratsMessage,
     ) {}
 
     public function execute(StandardGiveawayOccurrence $occurrence): StandardGiveawayOccurrence
@@ -78,15 +85,41 @@ class CloseAndDrawStandardGiveawayOccurrenceAction
                 ];
             }
 
+            $prizeItemNames = $items->pluck('name')->all();
+
+            $claimDeadlineAt = $locked->claim_deadline_hours !== null
+                ? now()->addHours($locked->claim_deadline_hours)
+                : null;
+
+            $congratsMessage = ($announcedWinners !== [] && $locked->congrats_message_template !== null)
+                ? ($this->renderCongratsMessage)(
+                    $locked->congrats_message_template,
+                    array_column($announcedWinners, 'discord_user_id'),
+                    implode(', ', $prizeItemNames),
+                    $locked->claim_link,
+                    $claimDeadlineAt,
+                )
+                : null;
+
             DiscordOutboundAction::query()->create([
                 'type' => DiscordOutboundAction::TYPE_ANNOUNCE_STANDARD_GIVEAWAY_WINNERS,
                 'standard_giveaway_occurrence_id' => $locked->id,
                 'payload' => [
                     'occurrence_id' => $locked->id,
+                    'title' => $locked->title,
+                    'description' => $locked->description,
+                    'ends_at' => $locked->ends_at?->toIso8601String(),
+                    'image_url' => $locked->image_url,
+                    'banner_image_url' => $locked->banner_image_url,
+                    'requires_booster' => $locked->requires_booster,
+                    'required_role_ids' => $locked->required_role_ids,
+                    'prize_item_names' => $prizeItemNames,
                     'channel_id' => $locked->channel_id,
                     'discord_thread_id' => $locked->discord_thread_id,
                     'discord_message_id' => $locked->discord_message_id,
                     'winners' => $announcedWinners,
+                    'claim_deadline_at' => $claimDeadlineAt?->toIso8601String(),
+                    'congrats_message' => $congratsMessage,
                 ],
                 'status' => DiscordOutboundAction::STATUS_PENDING,
             ]);

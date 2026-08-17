@@ -33,6 +33,14 @@ class CreateStandardGiveaway extends Component
 
     public mixed $image = null;
 
+    public mixed $bannerImage = null;
+
+    public string $claimLink = '';
+
+    public ?int $claimDeadlineHours = null;
+
+    public string $congratsMessageTemplate = '';
+
     public string $channelId = '';
 
     public string $postingMode = StandardGiveaway::POSTING_MODE_MESSAGE;
@@ -165,6 +173,10 @@ class CreateStandardGiveaway extends Component
             'title' => ['required', 'string', 'max:255'],
             'description' => ['required', 'string'],
             'image' => ['nullable', 'image', 'max:5120'],
+            'bannerImage' => ['nullable', 'image', 'max:5120'],
+            'claimLink' => ['nullable', 'string', 'max:500'],
+            'claimDeadlineHours' => ['nullable', 'integer', 'min:1'],
+            'congratsMessageTemplate' => ['nullable', 'string'],
             'channelId' => ['required', 'string'],
             'postingMode' => ['required', 'in:'.StandardGiveaway::POSTING_MODE_THREAD.','.StandardGiveaway::POSTING_MODE_MESSAGE],
             'winnerCount' => ['required', 'integer', 'min:1'],
@@ -208,6 +220,7 @@ class CreateStandardGiveaway extends Component
         }
 
         $imagePath = $this->image?->store('standard-giveaway-images', 'public');
+        $bannerImagePath = $this->bannerImage?->store('standard-giveaway-images', 'public');
 
         try {
             $giveaway = $createGiveaway->execute(
@@ -226,6 +239,10 @@ class CreateStandardGiveaway extends Component
                 $this->resolvedTimezone(),
                 $imagePath,
                 Auth::user(),
+                $bannerImagePath,
+                $validated['claimLink'] !== '' ? $validated['claimLink'] : null,
+                $validated['claimDeadlineHours'],
+                $validated['congratsMessageTemplate'] !== '' ? $validated['congratsMessageTemplate'] : null,
             );
         } catch (InvalidArgumentException $e) {
             $this->addError('selectedPrizeItemIds', $e->getMessage());

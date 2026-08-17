@@ -90,6 +90,50 @@ it('leaves the creator null when not provided', function () {
     expect($giveaway->created_by_user_id)->toBeNull();
 });
 
+it('persists banner image and claim/congrats fields, snapshotting them onto the immediate occurrence', function () {
+    $guild = Guild::factory()->create();
+    $theme = CollectionTheme::factory()->for($guild)->withItems(1)->create();
+    $item = $theme->items->first();
+
+    $giveaway = (new CreateStandardGiveawayAction)->execute(
+        $guild, 'Booster Giveaway', 'desc', '12345', StandardGiveaway::POSTING_MODE_MESSAGE,
+        1, true, 60, [$item->id], [],
+        null, now()->addDay(), 'UTC',
+        bannerImagePath: 'standard-giveaway-images/banner.jpg',
+        claimLink: 'https://discord.com/channels/1/2',
+        claimDeadlineHours: 48,
+        congratsMessageTemplate: 'Congrats {winners}! You won {prize}.',
+    );
+
+    expect($giveaway->banner_image_path)->toBe('standard-giveaway-images/banner.jpg')
+        ->and($giveaway->claim_link)->toBe('https://discord.com/channels/1/2')
+        ->and($giveaway->claim_deadline_hours)->toBe(48)
+        ->and($giveaway->congrats_message_template)->toBe('Congrats {winners}! You won {prize}.');
+
+    $occurrence = $giveaway->occurrences->first();
+    expect($occurrence->banner_image_path)->toBe('standard-giveaway-images/banner.jpg')
+        ->and($occurrence->claim_link)->toBe('https://discord.com/channels/1/2')
+        ->and($occurrence->claim_deadline_hours)->toBe(48)
+        ->and($occurrence->congrats_message_template)->toBe('Congrats {winners}! You won {prize}.');
+});
+
+it('leaves banner image and claim/congrats fields null when not provided', function () {
+    $guild = Guild::factory()->create();
+    $theme = CollectionTheme::factory()->for($guild)->withItems(1)->create();
+    $item = $theme->items->first();
+
+    $giveaway = (new CreateStandardGiveawayAction)->execute(
+        $guild, 'Plain Giveaway', 'desc', '12345', StandardGiveaway::POSTING_MODE_MESSAGE,
+        1, false, 60, [$item->id], [],
+        null, now()->addDay(), 'UTC',
+    );
+
+    expect($giveaway->banner_image_path)->toBeNull()
+        ->and($giveaway->claim_link)->toBeNull()
+        ->and($giveaway->claim_deadline_hours)->toBeNull()
+        ->and($giveaway->congrats_message_template)->toBeNull();
+});
+
 it('rejects zero prize items and creates nothing', function () {
     $guild = Guild::factory()->create();
 

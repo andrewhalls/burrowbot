@@ -32,12 +32,16 @@ class StandardGiveaway extends Model
         'title',
         'description',
         'image_path',
+        'banner_image_path',
         'channel_id',
         'posting_mode',
         'status',
         'winner_count',
         'requires_booster',
         'duration_minutes',
+        'claim_link',
+        'claim_deadline_hours',
+        'congrats_message_template',
         'recurrence_rule',
         'recurrence_start_at',
         'recurrence_timezone',
@@ -49,6 +53,7 @@ class StandardGiveaway extends Model
             'winner_count' => 'integer',
             'requires_booster' => 'boolean',
             'duration_minutes' => 'integer',
+            'claim_deadline_hours' => 'integer',
             'recurrence_start_at' => 'datetime',
         ];
     }
@@ -60,6 +65,16 @@ class StandardGiveaway extends Model
     {
         return Attribute::make(
             get: fn () => $this->image_path ? Storage::disk('public')->url($this->image_path) : null,
+        );
+    }
+
+    /**
+     * @return Attribute<string|null, never>
+     */
+    protected function bannerImageUrl(): Attribute
+    {
+        return Attribute::make(
+            get: fn () => $this->banner_image_path ? Storage::disk('public')->url($this->banner_image_path) : null,
         );
     }
 

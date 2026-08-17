@@ -115,6 +115,75 @@ it('replaces the image when a new one is uploaded, and keeps the existing one ot
     Storage::disk('public')->assertExists($updated->image_path);
 });
 
+it('pre-fills claim/congrats fields from the existing series', function () {
+    $guild = Guild::factory()->create();
+    $giveaway = StandardGiveaway::factory()->for($guild)
+        ->withClaimDetails('https://discord.com/channels/1/2', 48, 'Congrats {winners}!')
+        ->create();
+    $staff = actingEventStaffFor($guild);
+
+    Livewire::actingAs($staff)
+        ->test(EditStandardGiveaway::class, ['giveaway' => $giveaway])
+        ->assertSet('claimLink', 'https://discord.com/channels/1/2')
+        ->assertSet('claimDeadlineHours', 48)
+        ->assertSet('congratsMessageTemplate', 'Congrats {winners}!');
+});
+
+it('replaces the banner image when a new one is uploaded, and keeps the existing one otherwise', function () {
+    Storage::fake('public');
+
+    $guild = Guild::factory()->create();
+    $giveaway = StandardGiveaway::factory()->for($guild)->withBannerImage('standard-giveaway-images/original-banner.jpg')->create();
+    $item = CollectionThemeItem::factory()->create();
+    StandardGiveawayPrizeItem::factory()->for($giveaway)->create(['collection_theme_item_id' => $item->id]);
+    $staff = actingEventStaffFor($guild);
+
+    Livewire::actingAs($staff)
+        ->test(EditStandardGiveaway::class, ['giveaway' => $giveaway])
+        ->set('startDate', now()->addWeek()->toDateString())
+        ->set('startTime', '20:00')
+        ->set('bannerImage', UploadedFile::fake()->image('new-banner.jpg'))
+        ->call('save')
+        ->assertHasNoErrors();
+
+    $updated = $giveaway->fresh();
+    expect($updated->banner_image_path)->not->toBe('standard-giveaway-images/original-banner.jpg');
+    Storage::disk('public')->assertExists($updated->banner_image_path);
+});
+
+it('updates claim/congrats fields on save, leaving already-generated occurrences unaffected', function () {
+    $guild = Guild::factory()->create();
+    $giveaway = StandardGiveaway::factory()->for($guild)
+        ->withClaimDetails('old-link', 24, 'Old template')
+        ->create();
+    $occurrence = StandardGiveawayOccurrence::factory()->create([
+        'standard_giveaway_id' => $giveaway->id,
+        'claim_link' => 'old-link',
+        'claim_deadline_hours' => 24,
+        'congrats_message_template' => 'Old template',
+    ]);
+    $item = CollectionThemeItem::factory()->create();
+    StandardGiveawayPrizeItem::factory()->for($giveaway)->create(['collection_theme_item_id' => $item->id]);
+    $staff = actingEventStaffFor($guild);
+
+    Livewire::actingAs($staff)
+        ->test(EditStandardGiveaway::class, ['giveaway' => $giveaway])
+        ->set('startDate', now()->addWeek()->toDateString())
+        ->set('startTime', '20:00')
+        ->set('claimLink', 'new-link')
+        ->set('claimDeadlineHours', 72)
+        ->set('congratsMessageTemplate', 'New template {winners}')
+        ->call('save')
+        ->assertHasNoErrors();
+
+    expect($giveaway->fresh()->claim_link)->toBe('new-link')
+        ->and($giveaway->fresh()->claim_deadline_hours)->toBe(72)
+        ->and($giveaway->fresh()->congrats_message_template)->toBe('New template {winners}')
+        ->and($occurrence->fresh()->claim_link)->toBe('old-link')
+        ->and($occurrence->fresh()->claim_deadline_hours)->toBe(24)
+        ->and($occurrence->fresh()->congrats_message_template)->toBe('Old template');
+});
+
 it('denies mounting for a guild the user does not admin', function () {
     $giveaway = StandardGiveaway::factory()->create();
     $user = User::factory()->create();

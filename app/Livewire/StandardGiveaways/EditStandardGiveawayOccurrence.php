@@ -11,21 +11,27 @@ use App\Models\StandardGiveawayOccurrence;
 use Illuminate\Contracts\View\View;
 use InvalidArgumentException;
 use Livewire\Component;
+use Livewire\WithFileUploads;
 
 /**
- * Edits a single scheduled occurrence's description and prize items,
- * independent of its series and every other occurrence - reuses
+ * Edits a single scheduled occurrence's description, prize items, and
+ * image, independent of its series and every other occurrence - reuses
  * EditStandardGiveaway's prize-item search/chip pattern, scoped down to
- * just these two fields per the request (design.md Decision 1,
- * add-standard-giveaway-occurrence-editing).
+ * just these fields per the request (design.md Decision 1,
+ * add-standard-giveaway-occurrence-editing; image added in
+ * fix-occurrence-posting-timing).
  */
 class EditStandardGiveawayOccurrence extends Component
 {
+    use WithFileUploads;
+
     public StandardGiveawayOccurrence $occurrence;
 
     public Guild $guild;
 
     public string $description = '';
+
+    public mixed $image = null;
 
     public string $prizeItemSearch = '';
 
@@ -78,6 +84,7 @@ class EditStandardGiveawayOccurrence extends Component
 
         $this->validate([
             'description' => ['required', 'string'],
+            'image' => ['nullable', 'image', 'max:5120'],
         ]);
 
         if ($this->selectedPrizeItemIds === []) {
@@ -86,10 +93,13 @@ class EditStandardGiveawayOccurrence extends Component
             return;
         }
 
+        $imagePath = $this->image?->store('standard-giveaway-images', 'public') ?? $this->occurrence->image_path;
+
         try {
             $this->occurrence = $updateOccurrence->execute($this->occurrence, [
                 'description' => $this->description,
                 'prize_item_ids' => $this->selectedPrizeItemIds,
+                'image_path' => $imagePath,
             ]);
         } catch (InvalidArgumentException $e) {
             $this->addError('description', $e->getMessage());

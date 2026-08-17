@@ -7,11 +7,12 @@ use App\Models\Event;
 use App\Models\EventOccurrence;
 use App\Models\EventRoleSet;
 
-it('enqueues a post_event_occurrence_message action for a message-mode occurrence', function () {
+it('enqueues a post_event_occurrence_message action for a due message-mode occurrence', function () {
     $roleSet = EventRoleSet::factory()->withRoles(2)->create();
     $occurrence = EventOccurrence::factory()->create([
         'posting_mode' => Event::POSTING_MODE_MESSAGE,
         'event_role_set_id' => $roleSet->id,
+        'scheduled_start_at' => now()->subMinute(),
     ]);
 
     $this->artisan('events:post-due-occurrences')->assertSuccessful();
@@ -25,8 +26,11 @@ it('enqueues a post_event_occurrence_message action for a message-mode occurrenc
     expect($occurrence->fresh()->status)->toBe(EventOccurrence::STATUS_POSTED);
 });
 
-it('enqueues a post_event_occurrence_thread action for a thread-mode occurrence', function () {
-    $occurrence = EventOccurrence::factory()->create(['posting_mode' => Event::POSTING_MODE_THREAD]);
+it('enqueues a post_event_occurrence_thread action for a due thread-mode occurrence', function () {
+    $occurrence = EventOccurrence::factory()->create([
+        'posting_mode' => Event::POSTING_MODE_THREAD,
+        'scheduled_start_at' => now()->subMinute(),
+    ]);
 
     $this->artisan('events:post-due-occurrences');
 
@@ -35,7 +39,7 @@ it('enqueues a post_event_occurrence_thread action for a thread-mode occurrence'
 });
 
 it('includes the occurrence\'s image url in the outbound payload when set', function () {
-    $occurrence = EventOccurrence::factory()->withImage('event-images/abc.jpg')->create();
+    $occurrence = EventOccurrence::factory()->withImage('event-images/abc.jpg')->create(['scheduled_start_at' => now()->subMinute()]);
 
     $this->artisan('events:post-due-occurrences');
 
@@ -44,7 +48,7 @@ it('includes the occurrence\'s image url in the outbound payload when set', func
 });
 
 it('leaves the image url null in the outbound payload when unset', function () {
-    $occurrence = EventOccurrence::factory()->create();
+    $occurrence = EventOccurrence::factory()->create(['scheduled_start_at' => now()->subMinute()]);
 
     $this->artisan('events:post-due-occurrences');
 
@@ -58,4 +62,13 @@ it('does not re-post an already-posted occurrence', function () {
     $this->artisan('events:post-due-occurrences');
 
     expect(DiscordOutboundAction::query()->where('event_occurrence_id', $occurrence->id)->count())->toBe(0);
+});
+
+it('does not post a scheduled occurrence whose start time has not arrived yet', function () {
+    $occurrence = EventOccurrence::factory()->create(['scheduled_start_at' => now()->addWeek()]);
+
+    $this->artisan('events:post-due-occurrences');
+
+    expect(DiscordOutboundAction::query()->where('event_occurrence_id', $occurrence->id)->count())->toBe(0)
+        ->and($occurrence->fresh()->status)->toBe(EventOccurrence::STATUS_SCHEDULED);
 });

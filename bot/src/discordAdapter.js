@@ -67,9 +67,9 @@ export function createDiscordAdapter(client) {
     async postStandardGiveawayThread(payload) {
       const channel = await client.channels.fetch(payload.channel_id)
       const thread = await channel.threads.create({ name: payload.title })
-      await thread.send(buildStandardGiveawayOccurrenceMessage(payload))
+      const message = await thread.send(buildStandardGiveawayOccurrenceMessage(payload))
 
-      return { discordThreadId: thread.id }
+      return { discordThreadId: thread.id, discordMessageId: message.id }
     },
 
     async postStandardGiveawayMessage(payload) {
@@ -79,40 +79,62 @@ export function createDiscordAdapter(client) {
       return { discordMessageId: message.id }
     },
 
-    async announceStandardGiveawayWinners({ channel_id: channelId, discord_thread_id: discordThreadId, winners }) {
+    async announceStandardGiveawayWinners({
+      channel_id: channelId,
+      discord_thread_id: discordThreadId,
+      discord_message_id: discordMessageId,
+      winners,
+      congrats_message: congratsMessage,
+      ...occurrenceFields
+    }) {
       const channel = await client.channels.fetch(discordThreadId ?? channelId)
 
-      // Discord allows up to 10 embeds per message - one per winner (with
-      // that winner's own item image) is unambiguous when winners received
-      // different items. Falls back to today's single combined embed (no
-      // images) for a zero-winner close or an unusually large winner count
-      // (design.md Decision 2, add-collection-theme-item-images).
-      if (winners.length > 0 && winners.length <= 10) {
-        const embeds = winners.map((winner) => {
+      // The original post is rebuilt from the payload's own snapshot
+      // fields rather than patched from Discord's returned embed, so it
+      // stays correct even if editing races with anything else touching
+      // this message (design.md Decision 6).
+      if (discordMessageId) {
+        const message = await channel.messages.fetch(discordMessageId)
+        await message.edit(buildStandardGiveawayOccurrenceMessage(occurrenceFields, { winners, ended: true }))
+      } else {
+        // No message id on record for this occurrence (e.g. it predates
+        // this capability) - fall back to announcing without editing
+        // anything. Discord allows up to 10 embeds per message - one per
+        // winner (with that winner's own item image) is unambiguous when
+        // winners received different items. Falls back to a single
+        // combined embed (no images) for a zero-winner close or an
+        // unusually large winner count (design.md Decision 2,
+        // add-collection-theme-item-images).
+        if (winners.length > 0 && winners.length <= 10) {
+          const embeds = winners.map((winner) => {
+            const embed = new EmbedBuilder()
+              .setTitle(`🎉 ${winner.display_name} won!`)
+              .setDescription(`**${winner.item_name}**`)
+              .setColor(0x57f287)
+
+            if (winner.item_image_url) embed.setImage(winner.item_image_url)
+
+            return embed
+          })
+
+          await channel.send({ embeds })
+        } else {
           const embed = new EmbedBuilder()
-            .setTitle(`🎉 ${winner.display_name} won!`)
-            .setDescription(`**${winner.item_name}**`)
+            .setTitle('🎉 Winners announced!')
+            .setDescription(
+              winners.length > 0
+                ? winners.map((winner) => `<@${winner.discord_user_id}> won **${winner.item_name}**`).join('\n')
+                : 'No entrants - no winners this time.',
+            )
             .setColor(0x57f287)
 
-          if (winner.item_image_url) embed.setImage(winner.item_image_url)
-
-          return embed
-        })
-
-        await channel.send({ embeds })
-        return
+          await channel.send({ embeds: [embed] })
+        }
       }
 
-      const embed = new EmbedBuilder()
-        .setTitle('🎉 Winners announced!')
-        .setDescription(
-          winners.length > 0
-            ? winners.map((winner) => `<@${winner.discord_user_id}> won **${winner.item_name}**`).join('\n')
-            : 'No entrants - no winners this time.',
-        )
-        .setColor(0x57f287)
-
-      await channel.send({ embeds: [embed] })
+      if (congratsMessage) {
+        await channel.send({ content: congratsMessage })
+      }
     },
   }
 }

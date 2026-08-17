@@ -25,7 +25,7 @@ The system SHALL generate exactly one occurrence for a non-recurring event, at c
 - **THEN** exactly one occurrence exists for it, now and after any later occurrence-generation run
 
 ### Requirement: Posting an occurrence to Discord
-The system SHALL post each occurrence to Discord according to its event's posting mode: as a new Discord thread in the configured channel, or as a new plain message in the configured channel.
+The system SHALL post each occurrence to Discord according to its event's posting mode: as a new Discord thread in the configured channel, or as a new plain message in the configured channel. An occurrence SHALL NOT be posted before its scheduled time arrives.
 
 #### Scenario: Thread-mode posting
 - **WHEN** an occurrence belonging to a thread-mode event is due to be posted
@@ -34,6 +34,10 @@ The system SHALL post each occurrence to Discord according to its event's postin
 #### Scenario: Message-mode posting
 - **WHEN** an occurrence belonging to a message-mode event is due to be posted
 - **THEN** the system requests the bot post a new plain Discord message in the event's channel for that occurrence, alongside other channel activity, without creating a thread
+
+#### Scenario: Occurrence not yet due is left scheduled
+- **WHEN** a `scheduled` occurrence's scheduled start time has not yet arrived
+- **THEN** the system does not post it, and it remains `scheduled`
 
 ### Requirement: Independent roster per occurrence
 The system SHALL treat each occurrence's set of signups as wholly independent of every other occurrence of the same event series.
