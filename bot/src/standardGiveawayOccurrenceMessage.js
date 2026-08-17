@@ -55,6 +55,8 @@ export function buildStandardGiveawayOccurrenceMessage({
     restrictions.push(`Role required: ${requiredRoleIds.map((id) => `<@&${id}>`).join(', ')}`)
   }
 
+  const color = ended ? 0x5c5f66 : 0x5865f2
+
   const embed = new EmbedBuilder()
     .setTitle(`🎁 ${title}${ended ? ' (Ended)' : ''}`)
     .setDescription(description)
@@ -64,12 +66,15 @@ export function buildStandardGiveawayOccurrenceMessage({
       { name: 'Winners', value: winnersFieldValue(winners) },
       ...(restrictions.length > 0 ? [{ name: 'Eligibility', value: restrictions.join('\n') }] : []),
     )
-    .setColor(ended ? 0x5c5f66 : 0x5865f2)
+    .setColor(color)
 
   if (ended) embed.setFooter({ text: `ID: ${occurrenceId}` })
   if (imageUrl) embed.setImage(imageUrl)
 
-  const embeds = bannerImageUrl ? [new EmbedBuilder().setImage(bannerImageUrl), embed] : [embed]
+  // Matching .setColor() on the banner embed is what makes Discord render
+  // its left accent bar at all - without one it's borderless and reads as
+  // a visually separate, narrower card instead of a matching pair.
+  const embeds = bannerImageUrl ? [new EmbedBuilder().setImage(bannerImageUrl).setColor(color), embed] : [embed]
 
   if (ended) {
     return { embeds, components: [] }

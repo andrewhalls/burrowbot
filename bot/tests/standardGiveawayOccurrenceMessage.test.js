@@ -92,6 +92,13 @@ describe('buildStandardGiveawayOccurrenceMessage', () => {
     expect(message.embeds[1].data.title).toContain('Nitro Friday')
   })
 
+  it('gives the banner embed the same color as the content embed, so both render with a matching left accent bar', () => {
+    const message = buildStandardGiveawayOccurrenceMessage({ ...payload, banner_image_url: 'https://example.test/banner.png' })
+
+    expect(message.embeds[0].data.color).toBe(message.embeds[1].data.color)
+    expect(message.embeds[0].data.color).toBeDefined()
+  })
+
   it('renders the drawn winners, drops the Enter button, and adds a footer when ended', () => {
     const winners = [{ discord_user_id: '1', item_name: 'Golden Coin' }]
     const message = buildStandardGiveawayOccurrenceMessage(payload, { winners, ended: true })
