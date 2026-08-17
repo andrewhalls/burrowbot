@@ -33,6 +33,17 @@
             </div>
         </div>
     @else
+        <div class="flex items-center gap-4 mb-6 text-sm">
+            <a href="{{ \App\Support\Discord\BotInviteUrl::build() }}"
+               target="_blank" rel="noopener"
+               class="inline-flex items-center rounded-pill border border-line px-4 py-2 text-muted hover:bg-surface-hover hover:text-ink">
+                + Add to another server
+            </a>
+            <a href="{{ route('auth.discord.redirect') }}" class="text-muted hover:text-ink">
+                Refresh server list
+            </a>
+        </div>
+
         <div class="space-y-4">
             @foreach ($guilds as $guild)
                 <div class="rounded-card border border-line p-5">

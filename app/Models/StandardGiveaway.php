@@ -36,6 +36,7 @@ class StandardGiveaway extends Model
         'channel_id',
         'posting_mode',
         'status',
+        'archived_at',
         'winner_count',
         'requires_booster',
         'duration_minutes',
@@ -55,6 +56,7 @@ class StandardGiveaway extends Model
             'duration_minutes' => 'integer',
             'claim_deadline_hours' => 'integer',
             'recurrence_start_at' => 'datetime',
+            'archived_at' => 'datetime',
         ];
     }
 
@@ -126,6 +128,11 @@ class StandardGiveaway extends Model
     public function isActive(): bool
     {
         return $this->status === self::STATUS_ACTIVE;
+    }
+
+    public function isArchived(): bool
+    {
+        return $this->archived_at !== null;
     }
 
     /**

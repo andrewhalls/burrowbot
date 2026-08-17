@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 namespace App\Livewire\Events;
 
+use App\Actions\Events\ArchiveEventAction;
 use App\Actions\Events\DeleteEventAction;
+use App\Actions\Events\UnarchiveEventAction;
 use App\Actions\Events\UpdateEventStatusAction;
 use App\Models\Event;
 use App\Models\EventOccurrence;
@@ -30,6 +32,8 @@ class EventIndex extends Component
     public ?int $selectedOccurrenceId = null;
 
     public bool $editing = false;
+
+    public bool $showArchived = false;
 
     public function mount(Guild $guild): void
     {
@@ -69,6 +73,24 @@ class EventIndex extends Component
         $this->authorize('manage', $event);
 
         $updateStatus->execute($event, $status);
+    }
+
+    public function archive(int $eventId, ArchiveEventAction $archiveEvent): void
+    {
+        $event = Event::query()->where('guild_id', $this->guild->id)->findOrFail($eventId);
+
+        $this->authorize('manage', $event);
+
+        $archiveEvent->execute($event);
+    }
+
+    public function unarchive(int $eventId, UnarchiveEventAction $unarchiveEvent): void
+    {
+        $event = Event::query()->where('guild_id', $this->guild->id)->findOrFail($eventId);
+
+        $this->authorize('manage', $event);
+
+        $unarchiveEvent->execute($event);
     }
 
     public function select(int $eventId): void
@@ -132,6 +154,7 @@ class EventIndex extends Component
     {
         $events = $this->guild->events()
             ->with(['eventRoleSet', 'creator'])
+            ->when(! $this->showArchived, fn ($query) => $query->whereNull('archived_at'))
             ->orderByDesc('created_at')
             ->get();
 

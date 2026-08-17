@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 namespace App\Livewire\StandardGiveaways;
 
+use App\Actions\StandardGiveaways\ArchiveStandardGiveawayAction;
 use App\Actions\StandardGiveaways\DeleteStandardGiveawayAction;
+use App\Actions\StandardGiveaways\UnarchiveStandardGiveawayAction;
 use App\Actions\StandardGiveaways\UpdateStandardGiveawayStatusAction;
 use App\Models\Guild;
 use App\Models\StandardGiveaway;
@@ -25,6 +27,8 @@ class StandardGiveawayIndex extends Component
     public bool $editingSeries = false;
 
     public ?int $editingOccurrenceId = null;
+
+    public bool $showArchived = false;
 
     public function mount(Guild $guild): void
     {
@@ -70,6 +74,24 @@ class StandardGiveawayIndex extends Component
         $this->authorize('manage', $giveaway);
 
         $updateStatus->execute($giveaway, $status);
+    }
+
+    public function archive(int $giveawayId, ArchiveStandardGiveawayAction $archiveGiveaway): void
+    {
+        $giveaway = StandardGiveaway::query()->where('guild_id', $this->guild->id)->findOrFail($giveawayId);
+
+        $this->authorize('manage', $giveaway);
+
+        $archiveGiveaway->execute($giveaway);
+    }
+
+    public function unarchive(int $giveawayId, UnarchiveStandardGiveawayAction $unarchiveGiveaway): void
+    {
+        $giveaway = StandardGiveaway::query()->where('guild_id', $this->guild->id)->findOrFail($giveawayId);
+
+        $this->authorize('manage', $giveaway);
+
+        $unarchiveGiveaway->execute($giveaway);
     }
 
     public function select(int $giveawayId): void
@@ -144,6 +166,7 @@ class StandardGiveawayIndex extends Component
         $giveaways = $this->guild->standardGiveaways()
             ->withCount('prizeItems')
             ->with('creator')
+            ->when(! $this->showArchived, fn ($query) => $query->whereNull('archived_at'))
             ->orderByDesc('created_at')
             ->get();
 

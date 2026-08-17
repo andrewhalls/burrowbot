@@ -36,6 +36,7 @@ class Event extends Model
         'channel_id',
         'posting_mode',
         'status',
+        'archived_at',
         'recurrence_rule',
         'recurrence_start_at',
         'recurrence_timezone',
@@ -45,6 +46,7 @@ class Event extends Model
     {
         return [
             'recurrence_start_at' => 'datetime',
+            'archived_at' => 'datetime',
         ];
     }
 
@@ -98,6 +100,11 @@ class Event extends Model
     public function isActive(): bool
     {
         return $this->status === self::STATUS_ACTIVE;
+    }
+
+    public function isArchived(): bool
+    {
+        return $this->archived_at !== null;
     }
 
     /**

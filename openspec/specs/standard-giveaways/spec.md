@@ -78,6 +78,39 @@ The system SHALL let a guild admin configure how many winners are drawn when an 
 - **WHEN** a guild admin submits a winner count of zero or negative
 - **THEN** the system rejects the submission with a validation error
 
+### Requirement: Banner image configuration
+The system SHALL let a guild admin configure an optional banner (header) image on a standard giveaway series, separate from the giveaway's own prize/item image, that appears at the top of every occurrence posted for that series.
+
+#### Scenario: Series created with a banner image
+- **WHEN** a guild admin creates a standard giveaway and uploads a banner image
+- **THEN** the giveaway is created with that banner image, distinct from its own item image (if any)
+
+#### Scenario: Banner image is optional
+- **WHEN** a guild admin creates or edits a standard giveaway without setting a banner image
+- **THEN** the giveaway has no banner image, and occurrences posted for it are unaffected by the absence of one
+
+### Requirement: Winner claim configuration
+The system SHALL let a guild admin configure, per standard giveaway series, an optional claim link (a URL or Discord channel reference), an optional claim deadline expressed in hours, and an optional congratulations message template used when winners are announced.
+
+#### Scenario: Claim configuration is optional
+- **WHEN** a guild admin creates or edits a standard giveaway without setting a claim link, claim deadline, or congratulations message template
+- **THEN** the giveaway is saved successfully with those fields unset
+
+#### Scenario: Claim link accepts a URL or channel reference
+- **WHEN** a guild admin sets the claim link to either a URL or a Discord channel reference
+- **THEN** the system stores it as configured, without validating it against Discord or the URL's reachability
+
+### Requirement: Congratulations message template placeholders
+The system SHALL let a guild admin write a congratulations message template containing placeholders for the drawn winners' mentions, the prize name, the configured claim link, and the computed claim deadline, and SHALL accept a template that uses any subset of these placeholders (including none).
+
+#### Scenario: Template using all placeholders
+- **WHEN** a guild admin saves a congratulations message template referencing the winners, prize, claim link, and claim deadline placeholders
+- **THEN** the system stores the template as written, substituting all four when a winner announcement is later sent
+
+#### Scenario: Template using no placeholders
+- **WHEN** a guild admin saves a congratulations message template with plain text and no placeholders
+- **THEN** the system stores and later sends it unchanged, with nothing substituted
+
 ### Requirement: Standard giveaway series status
 The system SHALL support marking a standard giveaway series active, paused, or cancelled. Pausing or cancelling a recurring giveaway SHALL stop future occurrence generation without altering occurrences already generated.
 
@@ -86,7 +119,7 @@ The system SHALL support marking a standard giveaway series active, paused, or c
 - **THEN** no further occurrences are generated for it, and occurrences already generated are unaffected
 
 ### Requirement: Editing a standard giveaway series only affects future occurrences
-The system SHALL apply edits to a standard giveaway's title, description, image, channel, prize items, restrictions, winner count, posting mode, or recurrence rule only to occurrences generated after the edit; occurrences already generated keep the values in effect when they were generated.
+The system SHALL apply edits to a standard giveaway's title, description, image, banner image, channel, prize items, restrictions, winner count, posting mode, recurrence rule, claim link, claim deadline, or congratulations message template only to occurrences generated after the edit; occurrences already generated keep the values in effect when they were generated.
 
 #### Scenario: Editing prize items of an ongoing recurring giveaway
 - **WHEN** a guild admin changes the prize items on a recurring standard giveaway that already has generated occurrences
@@ -95,6 +128,14 @@ The system SHALL apply edits to a standard giveaway's title, description, image,
 #### Scenario: Editing the image of an ongoing recurring giveaway
 - **WHEN** a guild admin changes the image on a recurring standard giveaway that already has generated occurrences
 - **THEN** occurrences generated before the change keep their original image, and occurrences generated after the change use the new one
+
+#### Scenario: Editing the banner image of an ongoing recurring giveaway
+- **WHEN** a guild admin changes the banner image on a recurring standard giveaway that already has generated occurrences
+- **THEN** occurrences generated before the change keep their original banner image (or lack thereof), and occurrences generated after the change use the new one
+
+#### Scenario: Editing the congratulations message template of an ongoing recurring giveaway
+- **WHEN** a guild admin changes the congratulations message template on a recurring standard giveaway that already has generated occurrences
+- **THEN** occurrences generated before the change use the template in effect when they were generated, and occurrences generated after the change use the new one
 
 ### Requirement: Deleting a standard giveaway series
 The system SHALL allow a guild admin to permanently delete a standard giveaway series as long as none of its occurrences have been posted to Discord or closed, and SHALL reject deletion otherwise.
@@ -110,3 +151,33 @@ The system SHALL allow a guild admin to permanently delete a standard giveaway s
 #### Scenario: Deletion rejected once any occurrence has posted
 - **WHEN** a guild admin attempts to delete a standard giveaway series that has at least one `posted` or `closed` occurrence
 - **THEN** the system rejects the deletion, so an already-posted Discord message is never left orphaned by a delete
+
+### Requirement: Archiving a standard giveaway series
+The system SHALL let a guild admin archive a standard giveaway series from any status, which SHALL set its status to `cancelled` (stopping future occurrence generation, same as the existing Cancel action) and SHALL mark it archived. The system SHALL let a guild admin unarchive an archived series, which SHALL clear only the archived marker, leaving its status unchanged.
+
+#### Scenario: Archiving an active recurring giveaway
+- **WHEN** a guild admin archives an active recurring standard giveaway
+- **THEN** the system marks it cancelled and archived, and no further occurrences are generated for it
+
+#### Scenario: Archiving an already-cancelled giveaway
+- **WHEN** a guild admin archives a standard giveaway that is already cancelled
+- **THEN** the system marks it archived without changing its status
+
+#### Scenario: Unarchiving leaves status untouched
+- **WHEN** a guild admin unarchives a previously-archived standard giveaway
+- **THEN** the system clears its archived marker, and its status remains `cancelled`
+
+### Requirement: Archived standard giveaways are hidden from the default list
+The system SHALL exclude archived standard giveaway series from a guild's standard giveaway list by default, and SHALL let a guild admin toggle a "Show archived" control to include them alongside non-archived series.
+
+#### Scenario: Archived giveaway hidden by default
+- **WHEN** a guild admin views the standard giveaway list without the "Show archived" control enabled
+- **THEN** archived standard giveaway series do not appear in the list
+
+#### Scenario: Archived giveaway shown when toggled on
+- **WHEN** a guild admin enables the "Show archived" control
+- **THEN** archived standard giveaway series appear in the list alongside non-archived ones
+
+#### Scenario: Archived giveaways remain fully usable once shown
+- **WHEN** a guild admin views an archived standard giveaway series with "Show archived" enabled
+- **THEN** the system offers the same Edit, Delete, Activate, Pause, Cancel, and Unarchive actions as any other standard giveaway series

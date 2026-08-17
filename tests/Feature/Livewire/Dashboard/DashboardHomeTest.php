@@ -22,6 +22,18 @@ it('lists guilds the user administers, linking into each guild pages', function 
         ->assertSee(route('guilds.standard-giveaways.index', $guild));
 });
 
+it('offers an "Add to another server" and "Refresh server list" link even when the user already administers guilds', function () {
+    $guild = Guild::factory()->create(['name' => 'Loot Shed']);
+    $staff = actingEventStaffFor($guild);
+
+    Livewire::actingAs($staff)
+        ->test(DashboardHome::class)
+        ->assertSee('Add to another server')
+        ->assertSee('Refresh server list')
+        ->assertSee('discord.com/oauth2/authorize')
+        ->assertSee(route('auth.discord.redirect'));
+});
+
 it('never lists a guild the user does not administer', function () {
     $administered = Guild::factory()->create(['name' => 'Mine']);
     $other = Guild::factory()->create(['name' => 'Not Mine']);

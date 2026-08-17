@@ -91,4 +91,12 @@ class StandardGiveawayFactory extends Factory
     {
         return $this->state(['status' => StandardGiveaway::STATUS_CANCELLED]);
     }
+
+    public function archived(): static
+    {
+        return $this->state([
+            'status' => StandardGiveaway::STATUS_CANCELLED,
+            'archived_at' => now()->subDay(),
+        ]);
+    }
 }

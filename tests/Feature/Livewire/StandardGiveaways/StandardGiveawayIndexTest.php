@@ -180,6 +180,72 @@ it('changes a standard giveaway status', function () {
     expect($giveaway->fresh()->status)->toBe(StandardGiveaway::STATUS_PAUSED);
 });
 
+it('excludes archived giveaways from the list by default, and shows them when Show archived is toggled on', function () {
+    $guild = Guild::factory()->create();
+    $active = StandardGiveaway::factory()->for($guild)->create(['title' => 'Active Giveaway']);
+    $archived = StandardGiveaway::factory()->for($guild)->archived()->create(['title' => 'Old Giveaway']);
+    $staff = actingEventStaffFor($guild);
+
+    Livewire::actingAs($staff)
+        ->test(StandardGiveawayIndex::class, ['guild' => $guild])
+        ->assertSee('Active Giveaway')
+        ->assertDontSee('Old Giveaway')
+        ->set('showArchived', true)
+        ->assertSee('Active Giveaway')
+        ->assertSee('Old Giveaway');
+});
+
+it('archives a standard giveaway, cancelling it and hiding it from the default list', function () {
+    $guild = Guild::factory()->create();
+    $giveaway = StandardGiveaway::factory()->for($guild)->create(['status' => StandardGiveaway::STATUS_ACTIVE]);
+    $staff = actingEventStaffFor($guild);
+
+    Livewire::actingAs($staff)
+        ->test(StandardGiveawayIndex::class, ['guild' => $guild])
+        ->call('archive', $giveaway->id);
+
+    expect($giveaway->fresh()->status)->toBe(StandardGiveaway::STATUS_CANCELLED)
+        ->and($giveaway->fresh()->archived_at)->not->toBeNull();
+});
+
+it('unarchives a standard giveaway, leaving its status untouched', function () {
+    $guild = Guild::factory()->create();
+    $giveaway = StandardGiveaway::factory()->for($guild)->archived()->create();
+    $staff = actingEventStaffFor($guild);
+
+    Livewire::actingAs($staff)
+        ->test(StandardGiveawayIndex::class, ['guild' => $guild])
+        ->call('unarchive', $giveaway->id);
+
+    expect($giveaway->fresh()->archived_at)->toBeNull()
+        ->and($giveaway->fresh()->status)->toBe(StandardGiveaway::STATUS_CANCELLED);
+});
+
+it('offers Edit series and Unarchive for an archived giveaway once shown', function () {
+    $guild = Guild::factory()->create();
+    $giveaway = StandardGiveaway::factory()->for($guild)->archived()->create();
+    $staff = actingEventStaffFor($guild);
+
+    Livewire::actingAs($staff)
+        ->test(StandardGiveawayIndex::class, ['guild' => $guild])
+        ->set('showArchived', true)
+        ->call('select', $giveaway->id)
+        ->assertSeeHtml('wire:click="toggleEditSeries"')
+        ->assertSeeHtml('wire:click.stop="unarchive('.$giveaway->id.')"');
+});
+
+it('refuses to archive a standard giveaway belonging to a different guild', function () {
+    $guild = Guild::factory()->create();
+    $otherGuild = Guild::factory()->create();
+    $otherGiveaway = StandardGiveaway::factory()->for($otherGuild)->create();
+    $staff = actingEventStaffFor($guild);
+
+    expect(fn () => Livewire::actingAs($staff)
+        ->test(StandardGiveawayIndex::class, ['guild' => $guild])
+        ->call('archive', $otherGiveaway->id))
+        ->toThrow(\Illuminate\Database\Eloquent\ModelNotFoundException::class);
+});
+
 it('shows the most recent occurrence dashboard in the detail panel when a tile is selected', function () {
     $guild = Guild::factory()->create();
     $giveaway = StandardGiveaway::factory()->for($guild)->create();

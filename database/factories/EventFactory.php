@@ -66,4 +66,12 @@ class EventFactory extends Factory
     {
         return $this->state(['status' => Event::STATUS_CANCELLED]);
     }
+
+    public function archived(): static
+    {
+        return $this->state([
+            'status' => Event::STATUS_CANCELLED,
+            'archived_at' => now()->subDay(),
+        ]);
+    }
 }

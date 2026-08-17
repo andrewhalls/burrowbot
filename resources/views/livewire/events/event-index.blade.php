@@ -23,6 +23,11 @@
 
     <x-list-detail-shell :selected="$selectedEvent !== null || $showCreateForm">
         <x-slot:list>
+            <label class="flex items-center gap-2 text-xs text-muted mb-3">
+                <input type="checkbox" wire:model.live="showArchived">
+                Show archived
+            </label>
+
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 @forelse ($events as $event)
                     <div wire:key="event-tile-{{ $event->id }}" wire:click="select({{ $event->id }})"
@@ -30,17 +35,23 @@
                             'rounded-card border p-3 cursor-pointer hover:bg-surface-hover transition-colors flex flex-col',
                             'border-accent' => $selectedEvent?->id === $event->id,
                             'border-line' => $selectedEvent?->id !== $event->id,
+                            'opacity-60' => $event->isArchived(),
                          ])>
                         @if ($event->image_url)
                             <img src="{{ $event->image_url }}" alt="" class="w-full h-20 rounded-control object-cover mb-2">
                         @endif
                         <p class="font-medium text-ink text-sm truncate">{{ $event->title }}</p>
-                        <span @class([
-                            'rounded-pill px-2 py-0.5 text-[11px] font-medium shrink-0 self-start mt-1',
-                            'bg-success/15 text-success' => $event->status === 'active',
-                            'bg-warning/15 text-warning' => $event->status === 'paused',
-                            'bg-danger/15 text-danger' => $event->status === 'cancelled',
-                        ])>{{ ucfirst($event->status) }}</span>
+                        <div class="flex items-center gap-1 flex-wrap mt-1">
+                            <span @class([
+                                'rounded-pill px-2 py-0.5 text-[11px] font-medium shrink-0',
+                                'bg-success/15 text-success' => $event->status === 'active',
+                                'bg-warning/15 text-warning' => $event->status === 'paused',
+                                'bg-danger/15 text-danger' => $event->status === 'cancelled',
+                            ])>{{ ucfirst($event->status) }}</span>
+                            @if ($event->isArchived())
+                                <span class="rounded-pill px-2 py-0.5 text-[11px] font-medium shrink-0 bg-surface-hover text-muted">Archived</span>
+                            @endif
+                        </div>
                         <p class="text-xs text-muted mt-2">
                             {{ $event->eventRoleSet->name }} &middot;
                             {{ $event->isRecurring() ? 'Recurring' : 'One-off' }}
@@ -57,6 +68,11 @@
                             @endif
                             @if ($event->status !== 'cancelled')
                                 <button type="button" wire:click.stop="setStatus({{ $event->id }}, 'cancelled')" wire:confirm="Cancel this event?" class="text-danger hover:text-danger">Cancel</button>
+                            @endif
+                            @if ($event->isArchived())
+                                <button type="button" wire:click.stop="unarchive({{ $event->id }})" class="text-muted hover:text-ink">Unarchive</button>
+                            @else
+                                <button type="button" wire:click.stop="archive({{ $event->id }})" wire:confirm="Archive this event? This also cancels it." class="text-muted hover:text-ink">Archive</button>
                             @endif
                         </div>
                     </div>

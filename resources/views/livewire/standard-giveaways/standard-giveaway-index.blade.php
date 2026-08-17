@@ -23,6 +23,11 @@
 
     <x-list-detail-shell :selected="$selectedGiveaway !== null || $showCreateForm">
         <x-slot:list>
+            <label class="flex items-center gap-2 text-xs text-muted mb-3">
+                <input type="checkbox" wire:model.live="showArchived">
+                Show archived
+            </label>
+
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 @forelse ($giveaways as $giveaway)
                     <div wire:key="std-giveaway-tile-{{ $giveaway->id }}" wire:click="select({{ $giveaway->id }})"
@@ -30,17 +35,23 @@
                             'rounded-card border p-3 cursor-pointer hover:bg-surface-hover transition-colors flex flex-col',
                             'border-accent' => $selectedGiveaway?->id === $giveaway->id,
                             'border-line' => $selectedGiveaway?->id !== $giveaway->id,
+                            'opacity-60' => $giveaway->isArchived(),
                          ])>
                         @if ($giveaway->image_url)
                             <img src="{{ $giveaway->image_url }}" alt="" class="w-full h-20 rounded-control object-cover mb-2">
                         @endif
                         <p class="font-medium text-ink text-sm truncate">{{ $giveaway->title }}</p>
-                        <span @class([
-                            'rounded-pill px-2 py-0.5 text-[11px] font-medium shrink-0 self-start mt-1',
-                            'bg-success/15 text-success' => $giveaway->status === 'active',
-                            'bg-warning/15 text-warning' => $giveaway->status === 'paused',
-                            'bg-danger/15 text-danger' => $giveaway->status === 'cancelled',
-                        ])>{{ ucfirst($giveaway->status) }}</span>
+                        <div class="flex items-center gap-1 flex-wrap mt-1">
+                            <span @class([
+                                'rounded-pill px-2 py-0.5 text-[11px] font-medium shrink-0',
+                                'bg-success/15 text-success' => $giveaway->status === 'active',
+                                'bg-warning/15 text-warning' => $giveaway->status === 'paused',
+                                'bg-danger/15 text-danger' => $giveaway->status === 'cancelled',
+                            ])>{{ ucfirst($giveaway->status) }}</span>
+                            @if ($giveaway->isArchived())
+                                <span class="rounded-pill px-2 py-0.5 text-[11px] font-medium shrink-0 bg-surface-hover text-muted">Archived</span>
+                            @endif
+                        </div>
                         <p class="text-xs text-muted mt-2">
                             {{ $giveaway->prize_items_count }} prize item(s) &middot;
                             {{ $giveaway->winner_count }} winner(s)
@@ -64,6 +75,11 @@
                             @endif
                             @if ($giveaway->status !== 'cancelled')
                                 <button type="button" wire:click.stop="setStatus({{ $giveaway->id }}, 'cancelled')" wire:confirm="Cancel this giveaway?" class="text-danger hover:text-danger">Cancel</button>
+                            @endif
+                            @if ($giveaway->isArchived())
+                                <button type="button" wire:click.stop="unarchive({{ $giveaway->id }})" class="text-muted hover:text-ink">Unarchive</button>
+                            @else
+                                <button type="button" wire:click.stop="archive({{ $giveaway->id }})" wire:confirm="Archive this giveaway? This also cancels it." class="text-muted hover:text-ink">Archive</button>
                             @endif
                         </div>
                     </div>

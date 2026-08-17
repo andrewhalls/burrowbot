@@ -44,6 +44,72 @@ it('changes an event status', function () {
     expect($event->fresh()->status)->toBe(Event::STATUS_PAUSED);
 });
 
+it('excludes archived events from the list by default, and shows them when Show archived is toggled on', function () {
+    $guild = Guild::factory()->create();
+    $active = Event::factory()->for($guild)->create(['title' => 'Active Event']);
+    $archived = Event::factory()->for($guild)->archived()->create(['title' => 'Old Event']);
+    $staff = actingEventStaffFor($guild);
+
+    Livewire::actingAs($staff)
+        ->test(EventIndex::class, ['guild' => $guild])
+        ->assertSee('Active Event')
+        ->assertDontSee('Old Event')
+        ->set('showArchived', true)
+        ->assertSee('Active Event')
+        ->assertSee('Old Event');
+});
+
+it('archives an event, cancelling it and hiding it from the default list', function () {
+    $guild = Guild::factory()->create();
+    $event = Event::factory()->for($guild)->create(['status' => Event::STATUS_ACTIVE]);
+    $staff = actingEventStaffFor($guild);
+
+    Livewire::actingAs($staff)
+        ->test(EventIndex::class, ['guild' => $guild])
+        ->call('archive', $event->id);
+
+    expect($event->fresh()->status)->toBe(Event::STATUS_CANCELLED)
+        ->and($event->fresh()->archived_at)->not->toBeNull();
+});
+
+it('unarchives an event, leaving its status untouched', function () {
+    $guild = Guild::factory()->create();
+    $event = Event::factory()->for($guild)->archived()->create();
+    $staff = actingEventStaffFor($guild);
+
+    Livewire::actingAs($staff)
+        ->test(EventIndex::class, ['guild' => $guild])
+        ->call('unarchive', $event->id);
+
+    expect($event->fresh()->archived_at)->toBeNull()
+        ->and($event->fresh()->status)->toBe(Event::STATUS_CANCELLED);
+});
+
+it('offers Edit and Unarchive for an archived event once shown', function () {
+    $guild = Guild::factory()->create();
+    $event = Event::factory()->for($guild)->archived()->create();
+    $staff = actingEventStaffFor($guild);
+
+    Livewire::actingAs($staff)
+        ->test(EventIndex::class, ['guild' => $guild])
+        ->set('showArchived', true)
+        ->call('select', $event->id)
+        ->assertSeeHtml('wire:click="toggleEdit"')
+        ->assertSeeHtml('wire:click.stop="unarchive('.$event->id.')"');
+});
+
+it('refuses to archive an event belonging to a different guild', function () {
+    $guild = Guild::factory()->create();
+    $otherGuild = Guild::factory()->create();
+    $otherEvent = Event::factory()->for($otherGuild)->create();
+    $staff = actingEventStaffFor($guild);
+
+    expect(fn () => Livewire::actingAs($staff)
+        ->test(EventIndex::class, ['guild' => $guild])
+        ->call('archive', $otherEvent->id))
+        ->toThrow(\Illuminate\Database\Eloquent\ModelNotFoundException::class);
+});
+
 it('shows who created an event on its tile and in the summary panel', function () {
     $guild = Guild::factory()->create();
     $creator = User::factory()->create(['name' => 'Ada Admin']);

@@ -1,4 +1,4 @@
-<div class="rounded-card border border-line p-4 space-y-4 max-w-xl">
+<div class="rounded-card border border-line p-4 space-y-4 max-w-xl lg:max-w-3xl 2xl:max-w-4xl">
     <x-browser-timezone-input />
 
     <div>
