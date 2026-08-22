@@ -100,6 +100,30 @@ describe('executeOutboundAction', () => {
     expect(result).toEqual({})
   })
 
+  it('calls announceGiveawayWinner for an announce_giveaway_winner action', async () => {
+    const adapter = {
+      announceGiveawayWinner: vi.fn().mockResolvedValue(undefined),
+    }
+    const action = { type: 'announce_giveaway_winner', payload: { channel_id: '123', message: 'Congrats <@111>!' } }
+
+    const result = await executeOutboundAction(action, adapter)
+
+    expect(adapter.announceGiveawayWinner).toHaveBeenCalledWith(action.payload)
+    expect(result).toEqual({})
+  })
+
+  it('calls postBroadcastMessage for a post_broadcast_message action and returns the message id', async () => {
+    const adapter = {
+      postBroadcastMessage: vi.fn().mockResolvedValue({ discordMessageId: 'msg-4' }),
+    }
+    const action = { type: 'post_broadcast_message', payload: { channel_id: '123', message: 'Hello!' } }
+
+    const result = await executeOutboundAction(action, adapter)
+
+    expect(adapter.postBroadcastMessage).toHaveBeenCalledWith(action.payload)
+    expect(result).toEqual({ discordMessageId: 'msg-4' })
+  })
+
   it('throws on an unknown action type without calling either adapter method', async () => {
     const adapter = { postGiveawayMessage: vi.fn(), closeGiveawayMessage: vi.fn() }
 

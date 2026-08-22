@@ -32,6 +32,63 @@ it('creates a giveaway with valid input', function () {
     expect(Giveaway::query()->where('guild_id', $guild->id)->count())->toBe(1);
 });
 
+it('creates a giveaway with both winner-message fields set', function () {
+    $user = User::factory()->create();
+    $guild = Guild::factory()->create();
+    GuildAdmin::factory()->for($guild)->for($user)->create();
+    $theme = CollectionTheme::factory()->for($guild)->create();
+
+    Livewire::actingAs($user)
+        ->test(CreateGiveaway::class, ['guild' => $guild])
+        ->set('channelId', '123456')
+        ->set('collectionThemeId', $theme->id)
+        ->set('durationMinutes', 15)
+        ->set('winnerMessageChannelId', '987654')
+        ->set('winnerMessageTemplate', 'Congrats {winner}!')
+        ->call('save')
+        ->assertHasNoErrors();
+
+    $giveaway = Giveaway::query()->where('guild_id', $guild->id)->sole();
+    expect($giveaway->winner_message_channel_id)->toBe('987654')
+        ->and($giveaway->winner_message_template)->toBe('Congrats {winner}!');
+});
+
+it('rejects setting only the winner-message channel without a template', function () {
+    $user = User::factory()->create();
+    $guild = Guild::factory()->create();
+    GuildAdmin::factory()->for($guild)->for($user)->create();
+    $theme = CollectionTheme::factory()->for($guild)->create();
+
+    Livewire::actingAs($user)
+        ->test(CreateGiveaway::class, ['guild' => $guild])
+        ->set('channelId', '123456')
+        ->set('collectionThemeId', $theme->id)
+        ->set('durationMinutes', 15)
+        ->set('winnerMessageChannelId', '987654')
+        ->call('save')
+        ->assertHasErrors('winnerMessageTemplate');
+
+    expect(Giveaway::query()->where('guild_id', $guild->id)->count())->toBe(0);
+});
+
+it('rejects setting only the winner-message template without a channel', function () {
+    $user = User::factory()->create();
+    $guild = Guild::factory()->create();
+    GuildAdmin::factory()->for($guild)->for($user)->create();
+    $theme = CollectionTheme::factory()->for($guild)->create();
+
+    Livewire::actingAs($user)
+        ->test(CreateGiveaway::class, ['guild' => $guild])
+        ->set('channelId', '123456')
+        ->set('collectionThemeId', $theme->id)
+        ->set('durationMinutes', 15)
+        ->set('winnerMessageTemplate', 'Congrats {winner}!')
+        ->call('save')
+        ->assertHasErrors('winnerMessageChannelId');
+
+    expect(Giveaway::query()->where('guild_id', $guild->id)->count())->toBe(0);
+});
+
 it('creates a giveaway with a description and an image', function () {
     Storage::fake('public');
 

@@ -30,6 +30,8 @@ class GiveawayIndex extends Component
 
     public bool $editing = false;
 
+    public bool $editingWinnerMessage = false;
+
     public function mount(Guild $guild): void
     {
         $this->authorize('view', $guild);
@@ -44,6 +46,7 @@ class GiveawayIndex extends Component
         if ($this->showCreateForm) {
             $this->selectedId = null;
             $this->editing = false;
+            $this->editingWinnerMessage = false;
         }
     }
 
@@ -60,6 +63,12 @@ class GiveawayIndex extends Component
         $this->editing = false;
     }
 
+    #[On('giveaway-winner-message-updated')]
+    public function closeEditWinnerMessageForm(): void
+    {
+        $this->editingWinnerMessage = false;
+    }
+
     public function select(int $giveawayId): void
     {
         $exists = Giveaway::query()->where('guild_id', $this->guild->id)->where('id', $giveawayId)->exists();
@@ -67,12 +76,14 @@ class GiveawayIndex extends Component
         $this->selectedId = $exists ? $giveawayId : null;
         $this->showCreateForm = false;
         $this->editing = false;
+        $this->editingWinnerMessage = false;
     }
 
     public function deselect(): void
     {
         $this->selectedId = null;
         $this->editing = false;
+        $this->editingWinnerMessage = false;
     }
 
     public function toggleEdit(): void
@@ -82,6 +93,17 @@ class GiveawayIndex extends Component
         $this->authorize('manage', $giveaway);
 
         $this->editing = ! $this->editing;
+        $this->editingWinnerMessage = false;
+    }
+
+    public function toggleEditWinnerMessage(): void
+    {
+        $giveaway = Giveaway::query()->where('guild_id', $this->guild->id)->findOrFail($this->selectedId);
+
+        $this->authorize('manage', $giveaway);
+
+        $this->editingWinnerMessage = ! $this->editingWinnerMessage;
+        $this->editing = false;
     }
 
     public function start(int $giveawayId, StartGiveawayAction $startGiveaway): void

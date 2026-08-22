@@ -380,7 +380,7 @@ paths:
               properties:
                 discord_message_id:
                   type: string
-                  description: Required when acking a message-posting action (post_giveaway_message, post_event_occurrence_message, post_standard_giveaway_message)
+                  description: Required when acking a message-posting action (post_giveaway_message, post_event_occurrence_message, post_standard_giveaway_message, post_broadcast_message)
                 discord_thread_id:
                   type: string
                   description: Required when acking a thread-posting action (post_event_occurrence_thread, post_standard_giveaway_thread)
@@ -698,6 +698,7 @@ components:
             - post_standard_giveaway_thread
             - post_standard_giveaway_message
             - announce_standard_giveaway_winners
+            - post_broadcast_message
         giveaway_id:
           type: [integer, "null"]
           description: Set for giveaway-posting action types, null otherwise
@@ -707,6 +708,9 @@ components:
         standard_giveaway_occurrence_id:
           type: [integer, "null"]
           description: Set for standard-giveaway action types, null otherwise
+        broadcast_occurrence_id:
+          type: [integer, "null"]
+          description: Set for post_broadcast_message, null otherwise
         payload:
           type: object
           description: >-
@@ -728,7 +732,11 @@ components:
             item_name, item_image_url } (display_name is the member's
             resolved Discord display name, falling back to username if
             none is recorded; item_image_url omitted if that winner's
-            item has no image).
+            item has no image). For post_broadcast_message: occurrence_id,
+            channel_id, and message (the broadcast occurrence's message
+            template with every placeholder already resolved by Laravel -
+            the bot posts it verbatim and performs no placeholder
+            substitution of its own).
           additionalProperties: true
 
     StandardGiveawayEntryResult:

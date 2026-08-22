@@ -177,6 +177,70 @@ it('toggles into and out of the edit form for the selected giveaway', function (
         ->assertDontSeeLivewire('giveaways.edit-giveaway');
 });
 
+it('toggles into and out of the winner-message form for the selected giveaway', function () {
+    $guild = Guild::factory()->create();
+    $theme = CollectionTheme::factory()->for($guild)->create();
+    $giveaway = Giveaway::factory()->for($theme, 'collectionTheme')->for($guild)->create();
+    $staff = actingGiveawayStaffFor($guild);
+
+    Livewire::actingAs($staff)
+        ->test(GiveawayIndex::class, ['guild' => $guild])
+        ->call('select', $giveaway->id)
+        ->assertDontSeeLivewire('giveaways.edit-giveaway-winner-message')
+        ->call('toggleEditWinnerMessage')
+        ->assertSeeLivewire('giveaways.edit-giveaway-winner-message')
+        ->call('toggleEditWinnerMessage')
+        ->assertDontSeeLivewire('giveaways.edit-giveaway-winner-message');
+});
+
+it('offers the winner-message button regardless of giveaway status, unlike Edit/Start/Delete', function () {
+    $guild = Guild::factory()->create();
+    $theme = CollectionTheme::factory()->for($guild)->create();
+    $active = Giveaway::factory()->for($theme, 'collectionTheme')->for($guild)->active()->create();
+    $closed = Giveaway::factory()->for($theme, 'collectionTheme')->for($guild)->closed()->create();
+    $staff = actingGiveawayStaffFor($guild);
+
+    Livewire::actingAs($staff)
+        ->test(GiveawayIndex::class, ['guild' => $guild])
+        ->call('select', $active->id)
+        ->assertSeeHtml('wire:click="toggleEditWinnerMessage"');
+
+    Livewire::actingAs($staff)
+        ->test(GiveawayIndex::class, ['guild' => $guild])
+        ->call('select', $closed->id)
+        ->assertSeeHtml('wire:click="toggleEditWinnerMessage"');
+});
+
+it('opening the winner-message form closes the main edit form, and vice versa', function () {
+    $guild = Guild::factory()->create();
+    $theme = CollectionTheme::factory()->for($guild)->create();
+    $giveaway = Giveaway::factory()->for($theme, 'collectionTheme')->for($guild)->create();
+    $staff = actingGiveawayStaffFor($guild);
+
+    Livewire::actingAs($staff)
+        ->test(GiveawayIndex::class, ['guild' => $guild])
+        ->call('select', $giveaway->id)
+        ->call('toggleEdit')
+        ->assertSeeLivewire('giveaways.edit-giveaway')
+        ->call('toggleEditWinnerMessage')
+        ->assertSeeLivewire('giveaways.edit-giveaway-winner-message')
+        ->assertDontSeeLivewire('giveaways.edit-giveaway')
+        ->call('toggleEdit')
+        ->assertSeeLivewire('giveaways.edit-giveaway')
+        ->assertDontSeeLivewire('giveaways.edit-giveaway-winner-message');
+});
+
+it('shows a "Winner message on" badge on the tile once configured', function () {
+    $guild = Guild::factory()->create();
+    $theme = CollectionTheme::factory()->for($guild)->create();
+    Giveaway::factory()->for($theme, 'collectionTheme')->for($guild)->withWinnerMessage('987654', 'Congrats {winner}!')->create();
+    $staff = actingGiveawayStaffFor($guild);
+
+    Livewire::actingAs($staff)
+        ->test(GiveawayIndex::class, ['guild' => $guild])
+        ->assertSee('Winner message on');
+});
+
 it('offers Edit/Start/Delete in the header only while a draft giveaway is selected', function () {
     $guild = Guild::factory()->create();
     $theme = CollectionTheme::factory()->for($guild)->create();

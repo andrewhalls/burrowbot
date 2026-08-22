@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Database\Seeders;
 
+use App\Actions\Broadcasts\CreateBroadcastAction;
 use App\Actions\Events\CreateEventAction;
 use App\Actions\StandardGiveaways\CreateStandardGiveawayAction;
 use App\Models\CollectionTheme;
@@ -18,9 +19,9 @@ use Illuminate\Database\Seeder;
 /**
  * Local/demo data: a guild, an admin for it, a collection theme with
  * items, a sample draft giveaway, a "Raid Roles" event role set, a
- * recurring weekly event, and a recurring booster-only standard giveaway -
- * enough to click around the dashboard without configuring a real Discord
- * application first.
+ * recurring weekly event, a recurring booster-only standard giveaway, and
+ * a recurring weekly broadcast - enough to click around the dashboard
+ * without configuring a real Discord application first.
  */
 class BurrowDemoSeeder extends Seeder
 {
@@ -93,6 +94,16 @@ class BurrowDemoSeeder extends Seeder
             [],
             'FREQ=WEEKLY;BYDAY=FR',
             now()->next('Friday')->setTime(18, 0),
+            'UTC',
+        );
+
+        app(CreateBroadcastAction::class)->execute(
+            $guild,
+            'Raid Reset Reminder',
+            'Heads up {{guild_name}}! Raid reset is today at {{time}} in {{channel}}. Next reminder: {{next_occurrence_date}}.',
+            '000000000000000300',
+            'FREQ=WEEKLY;BYDAY=WE',
+            now()->next('Wednesday')->setTime(9, 0),
             'UTC',
         );
     }

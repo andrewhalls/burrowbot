@@ -3,6 +3,12 @@
         <h2 class="text-lg font-semibold text-ink">Popup giveaways</h2>
         <div class="flex items-center gap-2">
             @error('delete') <p class="text-xs text-danger">{{ $message }}</p> @enderror
+            @if ($selectedGiveaway && ! $showCreateForm)
+                <button type="button" wire:click="toggleEditWinnerMessage"
+                        class="rounded-pill bg-surface-hover hover:bg-line px-4 py-2 text-sm font-medium text-ink">
+                    {{ $editingWinnerMessage ? 'Cancel' : 'Winner message' }}
+                </button>
+            @endif
             @if ($selectedGiveaway && $selectedGiveaway->isDraft() && ! $showCreateForm)
                 <button type="button" wire:click="toggleEdit"
                         class="rounded-pill bg-surface-hover hover:bg-line px-4 py-2 text-sm font-medium text-ink">
@@ -39,12 +45,17 @@
                         <div class="flex items-start justify-between gap-1">
                             <p class="font-medium text-ink text-sm truncate">{{ $giveaway->collectionTheme->name }}</p>
                         </div>
-                        <span @class([
-                            'rounded-pill px-2 py-0.5 text-[11px] font-medium shrink-0 self-start mt-1',
-                            'bg-surface-hover text-muted' => $giveaway->status === 'draft',
-                            'bg-success/15 text-success' => $giveaway->status === 'active',
-                            'bg-line text-muted' => $giveaway->status === 'closed',
-                        ])>{{ ucfirst($giveaway->status) }}</span>
+                        <div class="flex items-center gap-1 flex-wrap mt-1">
+                            <span @class([
+                                'rounded-pill px-2 py-0.5 text-[11px] font-medium shrink-0',
+                                'bg-surface-hover text-muted' => $giveaway->status === 'draft',
+                                'bg-success/15 text-success' => $giveaway->status === 'active',
+                                'bg-line text-muted' => $giveaway->status === 'closed',
+                            ])>{{ ucfirst($giveaway->status) }}</span>
+                            @if ($giveaway->hasWinnerMessageConfigured())
+                                <span class="rounded-pill px-2 py-0.5 text-[11px] font-medium shrink-0 bg-surface-hover text-muted">Winner message on</span>
+                            @endif
+                        </div>
                         <p class="text-xs text-muted mt-2">
                             {{ $giveaway->entries_count }} {{ Str::plural('entrant', $giveaway->entries_count) }} &middot;
                             {{ $giveaway->duration_minutes }} min
@@ -77,6 +88,8 @@
         <x-slot:detail>
             @if ($showCreateForm)
                 <livewire:giveaways.create-giveaway :guild="$guild" :key="'create-giveaway-'.$guild->id" />
+            @elseif ($editingWinnerMessage && $selectedGiveaway)
+                <livewire:giveaways.edit-giveaway-winner-message :giveaway="$selectedGiveaway" :key="'edit-giveaway-winner-message-'.$selectedGiveaway->id" />
             @elseif ($editing && $selectedGiveaway)
                 <livewire:giveaways.edit-giveaway :giveaway="$selectedGiveaway" :key="'edit-giveaway-'.$selectedGiveaway->id" />
             @elseif ($selectedGiveaway)

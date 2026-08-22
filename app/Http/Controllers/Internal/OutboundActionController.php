@@ -7,6 +7,7 @@ namespace App\Http\Controllers\Internal;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\AckOutboundActionRequest;
 use App\Http\Requests\FailOutboundActionRequest;
+use App\Models\BroadcastOccurrence;
 use App\Models\DiscordOutboundAction;
 use App\Models\EventOccurrence;
 use App\Models\Giveaway;
@@ -62,6 +63,12 @@ class OutboundActionController extends Controller
                     'discord_message_id' => $discordMessageId !== '' ? $discordMessageId : null,
                     'discord_thread_id' => $discordThreadId !== '' ? $discordThreadId : null,
                 ]));
+        }
+
+        if ($outboundAction->type === DiscordOutboundAction::TYPE_POST_BROADCAST_MESSAGE && $discordMessageId !== '') {
+            BroadcastOccurrence::query()
+                ->whereKey($outboundAction->broadcast_occurrence_id)
+                ->update(['discord_message_id' => $discordMessageId]);
         }
 
         return response()->json($outboundAction->fresh());

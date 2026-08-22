@@ -34,6 +34,8 @@ class Giveaway extends Model
         'image_path',
         'status',
         'discord_message_id',
+        'winner_message_channel_id',
+        'winner_message_template',
         'starts_at',
         'ends_at',
     ];
@@ -115,6 +117,16 @@ class Giveaway extends Model
     public function isClosed(): bool
     {
         return $this->status === self::STATUS_CLOSED;
+    }
+
+    /**
+     * Whether both winner-message fields are set - the per-winner message
+     * (giveaway-entry - "Per-winner templated message sent on a new win")
+     * only sends when this is true.
+     */
+    public function hasWinnerMessageConfigured(): bool
+    {
+        return $this->winner_message_channel_id !== null && $this->winner_message_template !== null;
     }
 
     /**

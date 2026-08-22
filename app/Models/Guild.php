@@ -4,13 +4,14 @@ declare(strict_types=1);
 
 namespace App\Models;
 
+use Database\Factories\GuildFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Guild extends Model
 {
-    /** @use HasFactory<\Database\Factories\GuildFactory> */
+    /** @use HasFactory<GuildFactory> */
     use HasFactory;
 
     protected $fillable = [
@@ -97,5 +98,13 @@ class Guild extends Model
     public function standardGiveaways(): HasMany
     {
         return $this->hasMany(StandardGiveaway::class);
+    }
+
+    /**
+     * @return HasMany<Broadcast, $this>
+     */
+    public function broadcasts(): HasMany
+    {
+        return $this->hasMany(Broadcast::class);
     }
 }

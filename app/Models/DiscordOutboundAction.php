@@ -4,13 +4,14 @@ declare(strict_types=1);
 
 namespace App\Models;
 
+use Database\Factories\DiscordOutboundActionFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class DiscordOutboundAction extends Model
 {
-    /** @use HasFactory<\Database\Factories\DiscordOutboundActionFactory> */
+    /** @use HasFactory<DiscordOutboundActionFactory> */
     use HasFactory;
 
     public const TYPE_POST_GIVEAWAY_MESSAGE = 'post_giveaway_message';
@@ -27,6 +28,10 @@ class DiscordOutboundAction extends Model
 
     public const TYPE_ANNOUNCE_STANDARD_GIVEAWAY_WINNERS = 'announce_standard_giveaway_winners';
 
+    public const TYPE_ANNOUNCE_GIVEAWAY_WINNER = 'announce_giveaway_winner';
+
+    public const TYPE_POST_BROADCAST_MESSAGE = 'post_broadcast_message';
+
     public const STATUS_PENDING = 'pending';
 
     public const STATUS_ACKED = 'acked';
@@ -38,6 +43,7 @@ class DiscordOutboundAction extends Model
         'giveaway_id',
         'event_occurrence_id',
         'standard_giveaway_occurrence_id',
+        'broadcast_occurrence_id',
         'payload',
         'status',
         'attempts',
@@ -74,6 +80,14 @@ class DiscordOutboundAction extends Model
     public function standardGiveawayOccurrence(): BelongsTo
     {
         return $this->belongsTo(StandardGiveawayOccurrence::class);
+    }
+
+    /**
+     * @return BelongsTo<BroadcastOccurrence, $this>
+     */
+    public function broadcastOccurrence(): BelongsTo
+    {
+        return $this->belongsTo(BroadcastOccurrence::class);
     }
 
     public function isPending(): bool

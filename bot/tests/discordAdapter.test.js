@@ -203,3 +203,28 @@ describe('createDiscordAdapter - announceStandardGiveawayWinners', () => {
     expect(embeds[0].data.description).toContain('<@10>')
   })
 })
+
+describe('createDiscordAdapter - announceGiveawayWinner', () => {
+  it('sends the already-rendered message as plain content to the configured channel', async () => {
+    const { client, channel } = fakeClientWithChannel()
+    const adapter = createDiscordAdapter(client)
+
+    await adapter.announceGiveawayWinner({ channel_id: '123', message: 'Congrats <@111>! You won Golden Coin.' })
+
+    expect(client.channels.fetch).toHaveBeenCalledWith('123')
+    expect(channel.send).toHaveBeenCalledWith({ content: 'Congrats <@111>! You won Golden Coin.' })
+  })
+})
+
+describe('createDiscordAdapter - postBroadcastMessage', () => {
+  it('posts the already-resolved message as plain content and returns the new message id', async () => {
+    const { client, channel } = fakeClientWithChannel()
+    const adapter = createDiscordAdapter(client)
+
+    const result = await adapter.postBroadcastMessage({ channel_id: '123', message: 'Reminder: raid resets in <#456> at 8:00pm.' })
+
+    expect(client.channels.fetch).toHaveBeenCalledWith('123')
+    expect(channel.send).toHaveBeenCalledWith({ content: 'Reminder: raid resets in <#456> at 8:00pm.' })
+    expect(result).toEqual({ discordMessageId: 'msg-1' })
+  })
+})

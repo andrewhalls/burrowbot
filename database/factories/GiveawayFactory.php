@@ -66,6 +66,14 @@ class GiveawayFactory extends Factory
         return $this->state(['created_by_user_id' => $user->id]);
     }
 
+    public function withWinnerMessage(string $channelId, string $template): static
+    {
+        return $this->state([
+            'winner_message_channel_id' => $channelId,
+            'winner_message_template' => $template,
+        ]);
+    }
+
     public function closed(): static
     {
         return $this->state(function (array $attributes) {

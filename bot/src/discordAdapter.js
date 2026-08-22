@@ -136,5 +136,18 @@ export function createDiscordAdapter(client) {
         await channel.send({ content: congratsMessage })
       }
     },
+
+    async announceGiveawayWinner({ channel_id: channelId, message }) {
+      const channel = await client.channels.fetch(channelId)
+
+      await channel.send({ content: message })
+    },
+
+    async postBroadcastMessage({ channel_id: channelId, message }) {
+      const channel = await client.channels.fetch(channelId)
+      const sent = await channel.send({ content: message })
+
+      return { discordMessageId: sent.id }
+    },
   }
 }

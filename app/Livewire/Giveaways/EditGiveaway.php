@@ -43,6 +43,10 @@ class EditGiveaway extends Component
 
     public mixed $image = null;
 
+    public string $winnerMessageChannelId = '';
+
+    public string $winnerMessageTemplate = '';
+
     public function mount(Giveaway $giveaway): void
     {
         $this->authorize('manage', $giveaway);
@@ -53,6 +57,8 @@ class EditGiveaway extends Component
         $this->collectionThemeId = $giveaway->collection_theme_id;
         $this->durationMinutes = $giveaway->duration_minutes;
         $this->description = (string) $giveaway->description;
+        $this->winnerMessageChannelId = (string) $giveaway->winner_message_channel_id;
+        $this->winnerMessageTemplate = (string) $giveaway->winner_message_template;
 
         if ($giveaway->scheduled_start_at) {
             $local = $giveaway->scheduled_start_at->clone()->setTimezone($this->resolvedTimezone());
@@ -77,6 +83,8 @@ class EditGiveaway extends Component
             'scheduledStartTime' => ['nullable', 'required_with:scheduledStartDate', 'date_format:H:i'],
             'description' => ['nullable', 'string'],
             'image' => ['nullable', 'image', 'max:5120'],
+            'winnerMessageChannelId' => ['nullable', 'string', 'required_with:winnerMessageTemplate'],
+            'winnerMessageTemplate' => ['nullable', 'string', 'required_with:winnerMessageChannelId'],
         ]);
 
         $theme = CollectionTheme::query()->findOrFail($validated['collectionThemeId']);
@@ -102,6 +110,8 @@ class EditGiveaway extends Component
                 'scheduled_start_at' => $scheduledStartAt,
                 'description' => $validated['description'] !== '' ? $validated['description'] : null,
                 'image_path' => $imagePath,
+                'winner_message_channel_id' => $validated['winnerMessageChannelId'] !== '' ? $validated['winnerMessageChannelId'] : null,
+                'winner_message_template' => $validated['winnerMessageTemplate'] !== '' ? $validated['winnerMessageTemplate'] : null,
             ]);
         } catch (InvalidArgumentException $e) {
             $this->addError('collectionThemeId', $e->getMessage());

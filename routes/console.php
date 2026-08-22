@@ -2,8 +2,10 @@
 
 use App\Console\Commands\CloseExpiredGiveaways;
 use App\Console\Commands\CloseExpiredStandardGiveawayOccurrences;
+use App\Console\Commands\GenerateBroadcastOccurrences;
 use App\Console\Commands\GenerateEventOccurrences;
 use App\Console\Commands\GenerateStandardGiveawayOccurrences;
+use App\Console\Commands\PostDueBroadcastOccurrences;
 use App\Console\Commands\PostDueEventOccurrences;
 use App\Console\Commands\PostDueGiveaways;
 use App\Console\Commands\PostDueStandardGiveawayOccurrences;
@@ -22,3 +24,5 @@ Schedule::command(PostDueEventOccurrences::class)->everyMinute();
 Schedule::command(GenerateStandardGiveawayOccurrences::class)->hourly();
 Schedule::command(PostDueStandardGiveawayOccurrences::class)->everyMinute();
 Schedule::command(CloseExpiredStandardGiveawayOccurrences::class)->everyMinute();
+Schedule::command(GenerateBroadcastOccurrences::class)->hourly();
+Schedule::command(PostDueBroadcastOccurrences::class)->everyMinute();

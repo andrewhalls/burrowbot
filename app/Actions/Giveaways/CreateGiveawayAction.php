@@ -24,6 +24,8 @@ class CreateGiveawayAction
         ?string $description = null,
         ?string $imagePath = null,
         ?User $createdBy = null,
+        ?string $winnerMessageChannelId = null,
+        ?string $winnerMessageTemplate = null,
     ): Giveaway {
         return $guild->giveaways()->create([
             'created_by_user_id' => $createdBy?->id,
@@ -34,6 +36,8 @@ class CreateGiveawayAction
             'description' => $description,
             'image_path' => $imagePath,
             'status' => Giveaway::STATUS_DRAFT,
+            'winner_message_channel_id' => $winnerMessageChannelId,
+            'winner_message_template' => $winnerMessageTemplate,
         ]);
     }
 }

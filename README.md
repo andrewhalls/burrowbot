@@ -137,6 +137,34 @@ php artisan standard-giveaways:post-due-occurrences
 php artisan standard-giveaways:close-expired
 ```
 
+### Broadcast recurrence rules & scheduled commands
+
+Broadcasts (repeatable text messages posted to a Discord channel on a
+schedule, e.g. "every Wednesday, remind #general about raid reset") reuse the
+same `RRULE` recurrence engine and structured picker as events and standard
+giveaways. `null` means a one-off broadcast. A broadcast's message template
+supports a fixed set of mail-merge placeholders - `{{guild_name}}`,
+`{{channel}}`, `{{date}}`, `{{time}}`, `{{next_occurrence_date}}` - resolved
+at the moment each occurrence is actually posted, not when it was generated.
+
+Two scheduled commands, registered in `routes/console.php`, drive the
+lifecycle (broadcasts have no "ends"/closing step - a posted message is
+simply done):
+
+- `broadcasts:generate-occurrences` (hourly) — expands each active recurring
+  broadcast's rule up to a 90-day rolling window and creates any missing
+  `broadcast_occurrences` rows.
+- `broadcasts:post-due-occurrences` (every minute) — resolves the occurrence's
+  message template placeholders and enqueues the outbound action that posts
+  the result as a new plain Discord message.
+
+Run them manually while developing:
+
+```bash
+php artisan broadcasts:generate-occurrences
+php artisan broadcasts:post-due-occurrences
+```
+
 ### Bot service token
 
 `.env`'s `BOT_SERVICE_TOKEN` is the shared secret the bot process uses to
@@ -179,8 +207,9 @@ from Laravel's `/internal/*` API (documented in [`openapi.yaml`](openapi.yaml)).
 2. Start the scheduler: `php artisan schedule:work`. This runs
    `giveaways:close-expired`, `events:generate-occurrences`,
    `events:post-due-occurrences`, `standard-giveaways:generate-occurrences`,
-   `standard-giveaways:post-due-occurrences`, and
-   `standard-giveaways:close-expired` on their configured intervals.
+   `standard-giveaways:post-due-occurrences`,
+   `standard-giveaways:close-expired`, `broadcasts:generate-occurrences`,
+   and `broadcasts:post-due-occurrences` on their configured intervals.
 3. Start the bot (`npm start` in `bot/`).
 4. Invite your Discord application's bot to a test server; it will
    register the guild via `POST /internal/guilds` automatically.
@@ -190,7 +219,9 @@ from Laravel's `/internal/*` API (documented in [`openapi.yaml`](openapi.yaml)).
    an event (one-off or recurring) — an occurrence is posted automatically
    (immediately for a one-off event, or on the next `events:*` scheduler
    tick for a recurring one) with a role-select menu and a Not Attending
-   button.
+   button. For broadcasts: create a broadcast with a message template and a
+   channel — an occurrence is posted automatically the same way, with its
+   placeholders resolved at post time.
 
 ## Deploying
 
@@ -236,7 +267,7 @@ a different natural fit:
 
 | Process | What it does | Recommended tool |
 |---|---|---|
-| Laravel scheduler | fires `events:*`/`standard-giveaways:*`/`giveaways:close-expired` on their configured intervals | **cron** (not `schedule:work`) |
+| Laravel scheduler | fires `events:*`/`standard-giveaways:*`/`broadcasts:*`/`giveaways:close-expired` on their configured intervals | **cron** (not `schedule:work`) |
 | Queue worker (`queue:work`) | executes outbound Discord actions | **Supervisor** |
 | Bot process (`bot/`, Node) | the only thing that talks to Discord | **pm2** |
 

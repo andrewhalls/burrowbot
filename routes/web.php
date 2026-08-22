@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Auth\DiscordAuthController;
+use App\Livewire\Broadcasts\BroadcastIndex;
 use App\Livewire\CollectionThemes\CollectionThemeIndex;
 use App\Livewire\Dashboard\DashboardHome;
 use App\Livewire\EventRoleSets\EventRoleSetIndex;
@@ -42,6 +43,7 @@ Route::middleware('auth')->group(function () {
     Route::get('/guilds/{guild}/giveaways/{giveaway}', GiveawayDashboard::class)->name('guilds.giveaways.show');
     Route::get('/guilds/{guild}/standard-giveaways', StandardGiveawayIndex::class)->name('guilds.standard-giveaways.index');
     Route::get('/guilds/{guild}/standard-giveaway-occurrences/{occurrence}', OccurrenceDashboard::class)->name('guilds.standard-giveaway-occurrences.show');
+    Route::get('/guilds/{guild}/broadcasts', BroadcastIndex::class)->name('guilds.broadcasts.index');
 
     Route::post('/logout', function () {
         Auth::logout();

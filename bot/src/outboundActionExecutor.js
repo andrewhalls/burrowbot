@@ -13,6 +13,8 @@
  *   postStandardGiveawayThread: (payload: object) => Promise<{ discordThreadId: string, discordMessageId: string }>,
  *   postStandardGiveawayMessage: (payload: object) => Promise<{ discordMessageId: string }>,
  *   announceStandardGiveawayWinners: (payload: object) => Promise<void>,
+ *   announceGiveawayWinner: (payload: object) => Promise<void>,
+ *   postBroadcastMessage: (payload: object) => Promise<{ discordMessageId: string }>,
  * }} adapter
  * @returns {Promise<{ discordMessageId?: string, discordThreadId?: string }>}
  */
@@ -51,6 +53,15 @@ export async function executeOutboundAction(action, adapter) {
       await adapter.announceStandardGiveawayWinners(action.payload)
 
       return {}
+    case 'announce_giveaway_winner':
+      await adapter.announceGiveawayWinner(action.payload)
+
+      return {}
+    case 'post_broadcast_message': {
+      const { discordMessageId } = await adapter.postBroadcastMessage(action.payload)
+
+      return { discordMessageId }
+    }
     default:
       throw new Error(`Unknown outbound action type: ${action.type}`)
   }

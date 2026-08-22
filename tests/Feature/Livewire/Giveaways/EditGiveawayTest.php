@@ -36,6 +36,52 @@ it('pre-fills the form from the existing draft giveaway', function () {
         ->assertSet('description', 'Original description');
 });
 
+it('pre-fills the winner-message fields from the existing giveaway', function () {
+    $guild = Guild::factory()->create();
+    $theme = CollectionTheme::factory()->for($guild)->create();
+    $giveaway = Giveaway::factory()->for($theme, 'collectionTheme')->for($guild)
+        ->withWinnerMessage('987654', 'Congrats {winner}!')
+        ->create();
+    $user = actingGiveawayAdminFor($guild);
+
+    Livewire::actingAs($user)
+        ->test(EditGiveaway::class, ['giveaway' => $giveaway])
+        ->assertSet('winnerMessageChannelId', '987654')
+        ->assertSet('winnerMessageTemplate', 'Congrats {winner}!');
+});
+
+it('saves winner-message field changes to a draft giveaway', function () {
+    $guild = Guild::factory()->create();
+    $theme = CollectionTheme::factory()->for($guild)->create();
+    $giveaway = Giveaway::factory()->for($theme, 'collectionTheme')->for($guild)->create();
+    $user = actingGiveawayAdminFor($guild);
+
+    Livewire::actingAs($user)
+        ->test(EditGiveaway::class, ['giveaway' => $giveaway])
+        ->set('winnerMessageChannelId', '987654')
+        ->set('winnerMessageTemplate', 'Congrats {winner}!')
+        ->call('save')
+        ->assertHasNoErrors();
+
+    expect($giveaway->fresh()->winner_message_channel_id)->toBe('987654')
+        ->and($giveaway->fresh()->winner_message_template)->toBe('Congrats {winner}!');
+});
+
+it('rejects setting only one of the winner-message fields', function () {
+    $guild = Guild::factory()->create();
+    $theme = CollectionTheme::factory()->for($guild)->create();
+    $giveaway = Giveaway::factory()->for($theme, 'collectionTheme')->for($guild)->create();
+    $user = actingGiveawayAdminFor($guild);
+
+    Livewire::actingAs($user)
+        ->test(EditGiveaway::class, ['giveaway' => $giveaway])
+        ->set('winnerMessageChannelId', '987654')
+        ->call('save')
+        ->assertHasErrors('winnerMessageTemplate');
+
+    expect($giveaway->fresh()->winner_message_channel_id)->toBeNull();
+});
+
 it('saves changes to a draft giveaway', function () {
     $guild = Guild::factory()->create();
     $theme = CollectionTheme::factory()->for($guild)->create();

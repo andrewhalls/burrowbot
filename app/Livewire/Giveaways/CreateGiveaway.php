@@ -35,6 +35,10 @@ class CreateGiveaway extends Component
 
     public mixed $image = null;
 
+    public string $winnerMessageChannelId = '';
+
+    public string $winnerMessageTemplate = '';
+
     public function mount(Guild $guild): void
     {
         $this->authorize('manage', $guild);
@@ -59,6 +63,8 @@ class CreateGiveaway extends Component
             'scheduledStartTime' => ['nullable', 'required_with:scheduledStartDate', 'date_format:H:i'],
             'description' => ['nullable', 'string'],
             'image' => ['nullable', 'image', 'max:5120'],
+            'winnerMessageChannelId' => ['nullable', 'string', 'required_with:winnerMessageTemplate'],
+            'winnerMessageTemplate' => ['nullable', 'string', 'required_with:winnerMessageChannelId'],
         ]);
 
         $theme = CollectionTheme::query()->findOrFail($validated['collectionThemeId']);
@@ -85,11 +91,13 @@ class CreateGiveaway extends Component
             $validated['description'] !== '' ? $validated['description'] : null,
             $imagePath,
             Auth::user(),
+            $validated['winnerMessageChannelId'] !== '' ? $validated['winnerMessageChannelId'] : null,
+            $validated['winnerMessageTemplate'] !== '' ? $validated['winnerMessageTemplate'] : null,
         );
 
         $this->dispatch('giveaway-created', giveawayId: $giveaway->id);
 
-        $this->reset(['collectionThemeId', 'durationMinutes', 'scheduledStartDate', 'scheduledStartTime', 'description', 'image']);
+        $this->reset(['collectionThemeId', 'durationMinutes', 'scheduledStartDate', 'scheduledStartTime', 'description', 'image', 'winnerMessageChannelId', 'winnerMessageTemplate']);
     }
 
     public function render(): View

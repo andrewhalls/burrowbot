@@ -5,15 +5,21 @@ declare(strict_types=1);
 namespace App\Actions\Giveaways;
 
 use App\Actions\Members\SyncDiscordMemberAction;
+use App\Models\DiscordOutboundAction;
 use App\Models\Giveaway;
 use App\Models\GiveawayEntry;
 use App\Support\Giveaways\AssignRandomItem;
 use App\Support\Giveaways\JoinResult;
+use App\Support\Giveaways\RenderWinnerMessage;
 use Illuminate\Support\Facades\DB;
 
 /**
  * Processes a "Join Giveaway" click: the single place that enforces one
- * entry per member, authoritative expiry, and fair random assignment.
+ * entry per member, authoritative expiry, and fair random assignment. Also
+ * the single place a win happens, so it's where the optional per-winner
+ * templated message (giveaway-entry - "Per-winner templated message sent
+ * on a new win") is enqueued, immediately after the winning entry is
+ * created and never for a duplicate/expired join.
  *
  * See openspec specs/giveaway-entry (all requirements) and design.md §3-4.
  */
@@ -22,6 +28,7 @@ class JoinGiveawayAction
     public function __construct(
         private readonly SyncDiscordMemberAction $syncMember,
         private readonly AssignRandomItem $assignRandomItem,
+        private readonly RenderWinnerMessage $renderWinnerMessage,
     ) {}
 
     public function execute(Giveaway $giveaway, string $discordUserId, string $discordUsername, ?string $discordDisplayName = null): JoinResult
@@ -68,6 +75,22 @@ class JoinGiveawayAction
                 'discord_member_id' => $member->id,
                 'collection_theme_item_id' => $itemId,
             ]);
+
+            if ($locked->hasWinnerMessageConfigured()) {
+                DiscordOutboundAction::query()->create([
+                    'type' => DiscordOutboundAction::TYPE_ANNOUNCE_GIVEAWAY_WINNER,
+                    'giveaway_id' => $locked->id,
+                    'payload' => [
+                        'channel_id' => $locked->winner_message_channel_id,
+                        'message' => ($this->renderWinnerMessage)(
+                            $locked->winner_message_template,
+                            $discordUserId,
+                            $entry->collectionThemeItem->name,
+                        ),
+                    ],
+                    'status' => DiscordOutboundAction::STATUS_PENDING,
+                ]);
+            }
 
             return JoinResult::won($entry->collectionThemeItem);
         });

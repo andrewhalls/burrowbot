@@ -5,6 +5,7 @@ declare(strict_types=1);
 use App\Actions\Giveaways\JoinGiveawayAction;
 use App\Models\CollectionTheme;
 use App\Models\DiscordMember;
+use App\Models\DiscordOutboundAction;
 use App\Models\Giveaway;
 use App\Models\GiveawayEntry;
 use App\Support\Giveaways\JoinResult;
@@ -50,6 +51,71 @@ it('does not create a second entry or re-roll on a duplicate join', function () 
     expect($second->status)->toBe(JoinResult::STATUS_ALREADY_ENTERED)
         ->and($second->item->id)->toBe($first->item->id)
         ->and(GiveawayEntry::query()->count())->toBe(1);
+});
+
+it('enqueues a per-winner outbound action when both winner-message fields are configured', function () {
+    $theme = CollectionTheme::factory()->withItems(1)->create();
+    $giveaway = Giveaway::factory()->for($theme, 'collectionTheme')
+        ->active()
+        ->withWinnerMessage('987654', 'Congrats {winner}! You won {prize}.')
+        ->create();
+
+    $result = joinAction()->execute($giveaway, '111', 'winner-name');
+
+    $action = DiscordOutboundAction::query()
+        ->where('giveaway_id', $giveaway->id)
+        ->where('type', DiscordOutboundAction::TYPE_ANNOUNCE_GIVEAWAY_WINNER)
+        ->first();
+
+    expect($action)->not->toBeNull()
+        ->and($action->payload['channel_id'])->toBe('987654')
+        ->and($action->payload['message'])->toBe("Congrats <@111>! You won {$result->item->name}.");
+});
+
+it('does not enqueue a per-winner outbound action when neither winner-message field is configured', function () {
+    $theme = CollectionTheme::factory()->withItems(1)->create();
+    $giveaway = Giveaway::factory()->for($theme, 'collectionTheme')->active()->create();
+
+    joinAction()->execute($giveaway, '111', 'winner-name');
+
+    expect(DiscordOutboundAction::query()->where('giveaway_id', $giveaway->id)->where('type', DiscordOutboundAction::TYPE_ANNOUNCE_GIVEAWAY_WINNER)->count())->toBe(0);
+});
+
+it('does not enqueue a per-winner outbound action when only the channel is configured', function () {
+    $theme = CollectionTheme::factory()->withItems(1)->create();
+    $giveaway = Giveaway::factory()->for($theme, 'collectionTheme')->active()->create(['winner_message_channel_id' => '987654']);
+
+    joinAction()->execute($giveaway, '111', 'winner-name');
+
+    expect(DiscordOutboundAction::query()->where('giveaway_id', $giveaway->id)->where('type', DiscordOutboundAction::TYPE_ANNOUNCE_GIVEAWAY_WINNER)->count())->toBe(0);
+});
+
+it('does not enqueue a per-winner outbound action for a duplicate join', function () {
+    $theme = CollectionTheme::factory()->withItems(1)->create();
+    $giveaway = Giveaway::factory()->for($theme, 'collectionTheme')
+        ->active()
+        ->withWinnerMessage('987654', 'Congrats {winner}!')
+        ->create();
+
+    joinAction()->execute($giveaway, '111', 'winner-name');
+    joinAction()->execute($giveaway, '111', 'winner-name');
+
+    expect(DiscordOutboundAction::query()->where('giveaway_id', $giveaway->id)->where('type', DiscordOutboundAction::TYPE_ANNOUNCE_GIVEAWAY_WINNER)->count())->toBe(1);
+});
+
+it('does not enqueue a per-winner outbound action for an expired join', function () {
+    $theme = CollectionTheme::factory()->withItems(1)->create();
+    $giveaway = Giveaway::factory()->for($theme, 'collectionTheme')
+        ->withWinnerMessage('987654', 'Congrats {winner}!')
+        ->create([
+            'status' => Giveaway::STATUS_ACTIVE,
+            'starts_at' => now()->subHour(),
+            'ends_at' => now()->subMinute(),
+        ]);
+
+    joinAction()->execute($giveaway, '111', 'winner-name');
+
+    expect(DiscordOutboundAction::query()->where('giveaway_id', $giveaway->id)->where('type', DiscordOutboundAction::TYPE_ANNOUNCE_GIVEAWAY_WINNER)->count())->toBe(0);
 });
 
 it('rejects a join after ends_at even if status has not been flipped to closed yet', function () {
