@@ -23,3 +23,21 @@ it('denies managing a broadcast belonging to a guild the user does not admin', f
 
     expect($user->can('manage', $broadcast))->toBeFalse();
 });
+
+it('allows a scoped admin granted the broadcasts section', function () {
+    $user = User::factory()->create();
+    $guild = Guild::factory()->create();
+    GuildAdmin::factory()->for($guild)->for($user)->granted(['broadcasts'])->create();
+    $broadcast = Broadcast::factory()->for($guild)->create();
+
+    expect($user->can('manage', $broadcast))->toBeTrue();
+});
+
+it('denies a scoped admin not granted the broadcasts section', function () {
+    $user = User::factory()->create();
+    $guild = Guild::factory()->create();
+    GuildAdmin::factory()->for($guild)->for($user)->granted(['events'])->create();
+    $broadcast = Broadcast::factory()->for($guild)->create();
+
+    expect($user->can('manage', $broadcast))->toBeFalse();
+});

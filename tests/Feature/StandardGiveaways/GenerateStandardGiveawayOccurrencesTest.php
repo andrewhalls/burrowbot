@@ -62,6 +62,22 @@ it('snapshots the giveaway banner image and claim/congrats fields into each gene
         ->and($first->congrats_message_template)->toBe('Congrats {winners}!');
 });
 
+it('snapshots the giveaway\'s per-winner message fields into each generated occurrence', function () {
+    $theme = CollectionTheme::factory()->withItems(1)->create();
+    $item = $theme->items->first();
+    $giveaway = StandardGiveaway::factory()->for($theme->guild)
+        ->withPerWinnerMessage('987654', 'Congrats {winner}!')
+        ->recurring('FREQ=WEEKLY;BYDAY=FR', now()->next('Friday')->setTime(18, 0), 'UTC')
+        ->create();
+    StandardGiveawayPrizeItem::factory()->for($giveaway, 'standardGiveaway')->create(['collection_theme_item_id' => $item->id]);
+
+    $this->artisan('standard-giveaways:generate-occurrences')->assertSuccessful();
+
+    $first = $giveaway->occurrences()->orderBy('scheduled_post_at')->first();
+    expect($first->per_winner_message_channel_id)->toBe('987654')
+        ->and($first->per_winner_message_template)->toBe('Congrats {winner}!');
+});
+
 it('stores scheduled_post_at as a true UTC instant, not the recurrence timezone\'s wall-clock digits', function () {
     $localStart = now('Asia/Tokyo')->next('Friday')->setTime(18, 0);
     $giveaway = StandardGiveaway::factory()->recurring('FREQ=WEEKLY;BYDAY=FR', $localStart, 'Asia/Tokyo')->create();

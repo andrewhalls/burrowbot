@@ -33,8 +33,11 @@ class EditGiveawayWinnerMessage extends Component
     {
         $this->authorize('manage', $giveaway);
 
-        $this->giveaway = $giveaway;
         $this->guild = $giveaway->guild;
+
+        abort_unless($this->guild->popup_giveaway_winner_messages_enabled, 403);
+
+        $this->giveaway = $giveaway;
         $this->winnerMessageChannelId = (string) $giveaway->winner_message_channel_id;
         $this->winnerMessageTemplate = (string) $giveaway->winner_message_template;
     }

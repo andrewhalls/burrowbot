@@ -6,7 +6,9 @@ namespace App\Livewire\CollectionThemes;
 
 use App\Actions\CollectionThemes\CreateCollectionThemeAction;
 use App\Models\Guild;
+use App\Support\GuildAdmins\GuildAdminSection;
 use Illuminate\Contracts\View\View;
+use Illuminate\Support\Facades\Auth;
 use InvalidArgumentException;
 use Livewire\Component;
 use Livewire\WithFileUploads;
@@ -26,7 +28,7 @@ class CreateCollectionTheme extends Component
 
     public function mount(Guild $guild): void
     {
-        $this->authorize('manage', $guild);
+        abort_unless(Auth::user()->hasGuildAdminSection($guild, GuildAdminSection::THEMES), 403);
 
         $this->guild = $guild;
     }
@@ -44,7 +46,7 @@ class CreateCollectionTheme extends Component
 
     public function save(CreateCollectionThemeAction $createTheme): void
     {
-        $this->authorize('manage', $this->guild);
+        abort_unless(Auth::user()->hasGuildAdminSection($this->guild, GuildAdminSection::THEMES), 403);
 
         $this->validate([
             'name' => ['required', 'string', 'max:255'],

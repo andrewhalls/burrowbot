@@ -259,6 +259,52 @@ it('creates a standard giveaway with a banner image and claim/congrats fields', 
     Storage::disk('public')->assertExists($giveaway->banner_image_path);
 });
 
+it('creates a standard giveaway with per-winner message fields set, independent of the congrats fields', function () {
+    $guild = Guild::factory()->create();
+    $theme = CollectionTheme::factory()->for($guild)->withItems(1)->create();
+    $item = $theme->items->first();
+    $staff = actingEventStaffFor($guild);
+
+    Livewire::actingAs($staff)
+        ->test(CreateStandardGiveaway::class, ['guild' => $guild])
+        ->set('title', 'Booster Giveaway')
+        ->set('description', 'desc')
+        ->set('channelId', '123456')
+        ->set('perWinnerMessageChannelId', '987654')
+        ->set('perWinnerMessageTemplate', 'Congrats {winner}! You won {prize}.')
+        ->set('startDate', now()->addWeek()->toDateString())
+        ->set('startTime', '20:00')
+        ->call('addPrizeItem', $item->id)
+        ->call('save')
+        ->assertHasNoErrors();
+
+    $giveaway = StandardGiveaway::query()->where('title', 'Booster Giveaway')->sole();
+    expect($giveaway->per_winner_message_channel_id)->toBe('987654')
+        ->and($giveaway->per_winner_message_template)->toBe('Congrats {winner}! You won {prize}.')
+        ->and($giveaway->congrats_message_template)->toBeNull();
+});
+
+it('rejects setting only one of the per-winner message fields', function () {
+    $guild = Guild::factory()->create();
+    $theme = CollectionTheme::factory()->for($guild)->withItems(1)->create();
+    $item = $theme->items->first();
+    $staff = actingEventStaffFor($guild);
+
+    Livewire::actingAs($staff)
+        ->test(CreateStandardGiveaway::class, ['guild' => $guild])
+        ->set('title', 'Booster Giveaway')
+        ->set('description', 'desc')
+        ->set('channelId', '123456')
+        ->set('perWinnerMessageChannelId', '987654')
+        ->set('startDate', now()->addWeek()->toDateString())
+        ->set('startTime', '20:00')
+        ->call('addPrizeItem', $item->id)
+        ->call('save')
+        ->assertHasErrors('perWinnerMessageTemplate');
+
+    expect(StandardGiveaway::query()->where('title', 'Booster Giveaway')->count())->toBe(0);
+});
+
 it('leaves banner image and claim/congrats fields null when left blank', function () {
     $guild = Guild::factory()->create();
     $theme = CollectionTheme::factory()->for($guild)->withItems(1)->create();
@@ -280,7 +326,9 @@ it('leaves banner image and claim/congrats fields null when left blank', functio
     expect($giveaway->banner_image_path)->toBeNull()
         ->and($giveaway->claim_link)->toBeNull()
         ->and($giveaway->claim_deadline_hours)->toBeNull()
-        ->and($giveaway->congrats_message_template)->toBeNull();
+        ->and($giveaway->congrats_message_template)->toBeNull()
+        ->and($giveaway->per_winner_message_channel_id)->toBeNull()
+        ->and($giveaway->per_winner_message_template)->toBeNull();
 });
 
 it('shows the selected prize item\'s name (not a bare id) as a chip', function () {

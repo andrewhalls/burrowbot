@@ -39,6 +39,8 @@ class StandardGiveawayOccurrence extends Model
         'claim_link',
         'claim_deadline_hours',
         'congrats_message_template',
+        'per_winner_message_channel_id',
+        'per_winner_message_template',
         'scheduled_post_at',
         'status',
         'posted_at',
@@ -122,6 +124,16 @@ class StandardGiveawayOccurrence extends Model
     public function isThreadMode(): bool
     {
         return $this->posting_mode === StandardGiveaway::POSTING_MODE_THREAD;
+    }
+
+    /**
+     * Whether both per-winner message fields are set on this occurrence -
+     * mirrors StandardGiveaway::hasPerWinnerMessageConfigured(), read from
+     * the occurrence's own snapshot rather than the series.
+     */
+    public function hasPerWinnerMessageConfigured(): bool
+    {
+        return $this->per_winner_message_channel_id !== null && $this->per_winner_message_template !== null;
     }
 
     /**

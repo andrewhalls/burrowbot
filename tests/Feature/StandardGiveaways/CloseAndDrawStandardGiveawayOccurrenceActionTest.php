@@ -238,6 +238,80 @@ it('leaves claim_deadline_at null when the occurrence has no claim_deadline_hour
     expect($action->payload['claim_deadline_at'])->toBeNull();
 });
 
+it('enqueues one per-winner outbound action per winner, alongside the existing single batch action', function () {
+    $theme = CollectionTheme::factory()->withItems(2)->create();
+    $occurrence = StandardGiveawayOccurrence::factory()
+        ->withPerWinnerMessage('987654', 'Congrats {winner}! You won {prize}.')
+        ->ended()
+        ->create([
+            'winner_count' => 2,
+            'prize_item_ids' => $theme->items->pluck('id')->all(),
+            'congrats_message_template' => 'Congrats everyone!',
+        ]);
+    $memberA = DiscordMember::factory()->create(['discord_user_id' => '111']);
+    $memberB = DiscordMember::factory()->create(['discord_user_id' => '222']);
+    StandardGiveawayEntry::factory()->for($occurrence, 'standardGiveawayOccurrence')->for($memberA, 'discordMember')->create();
+    StandardGiveawayEntry::factory()->for($occurrence, 'standardGiveawayOccurrence')->for($memberB, 'discordMember')->create();
+
+    closeAndDrawAction()->execute($occurrence);
+
+    $perWinnerActions = DiscordOutboundAction::query()
+        ->where('standard_giveaway_occurrence_id', $occurrence->id)
+        ->where('type', DiscordOutboundAction::TYPE_ANNOUNCE_STANDARD_GIVEAWAY_WINNER)
+        ->get();
+
+    expect($perWinnerActions)->toHaveCount(2);
+    foreach ($perWinnerActions as $action) {
+        expect($action->payload['channel_id'])->toBe('987654')
+            ->and($action->payload['message'])->toMatch('/^Congrats <@(111|222)>! You won .+\.$/');
+    }
+
+    $batchAction = DiscordOutboundAction::query()
+        ->where('standard_giveaway_occurrence_id', $occurrence->id)
+        ->where('type', DiscordOutboundAction::TYPE_ANNOUNCE_STANDARD_GIVEAWAY_WINNERS)
+        ->first();
+    expect($batchAction)->not->toBeNull()
+        ->and($batchAction->payload['congrats_message'])->toBe('Congrats everyone!');
+});
+
+it('enqueues per-winner actions with no batch congrats message when only the per-winner fields are configured', function () {
+    $occurrence = StandardGiveawayOccurrence::factory()
+        ->withPerWinnerMessage('987654', 'Congrats {winner}!')
+        ->ended()
+        ->create(['winner_count' => 1, 'congrats_message_template' => null]);
+    StandardGiveawayEntry::factory()->for($occurrence, 'standardGiveawayOccurrence')->create();
+
+    closeAndDrawAction()->execute($occurrence);
+
+    expect(DiscordOutboundAction::query()->where('standard_giveaway_occurrence_id', $occurrence->id)->where('type', DiscordOutboundAction::TYPE_ANNOUNCE_STANDARD_GIVEAWAY_WINNER)->count())->toBe(1);
+
+    $batchAction = DiscordOutboundAction::query()
+        ->where('standard_giveaway_occurrence_id', $occurrence->id)
+        ->where('type', DiscordOutboundAction::TYPE_ANNOUNCE_STANDARD_GIVEAWAY_WINNERS)
+        ->first();
+    expect($batchAction->payload['congrats_message'])->toBeNull();
+});
+
+it('enqueues no per-winner actions when neither per-winner field is configured', function () {
+    $occurrence = StandardGiveawayOccurrence::factory()->ended()->create(['winner_count' => 1]);
+    StandardGiveawayEntry::factory()->for($occurrence, 'standardGiveawayOccurrence')->create();
+
+    closeAndDrawAction()->execute($occurrence);
+
+    expect(DiscordOutboundAction::query()->where('standard_giveaway_occurrence_id', $occurrence->id)->where('type', DiscordOutboundAction::TYPE_ANNOUNCE_STANDARD_GIVEAWAY_WINNER)->count())->toBe(0);
+});
+
+it('enqueues no per-winner actions when the occurrence closes with zero winners, even with both fields configured', function () {
+    $occurrence = StandardGiveawayOccurrence::factory()
+        ->withPerWinnerMessage('987654', 'Congrats {winner}!')
+        ->ended()
+        ->create(['winner_count' => 3]);
+
+    closeAndDrawAction()->execute($occurrence);
+
+    expect(DiscordOutboundAction::query()->where('standard_giveaway_occurrence_id', $occurrence->id)->where('type', DiscordOutboundAction::TYPE_ANNOUNCE_STANDARD_GIVEAWAY_WINNER)->count())->toBe(0);
+});
+
 it('is idempotent - running twice does not double-draw', function () {
     $occurrence = StandardGiveawayOccurrence::factory()->ended()->create(['winner_count' => 1]);
     StandardGiveawayEntry::factory()->for($occurrence, 'standardGiveawayOccurrence')->create();

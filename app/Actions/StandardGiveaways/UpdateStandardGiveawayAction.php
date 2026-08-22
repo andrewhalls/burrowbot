@@ -35,6 +35,7 @@ class UpdateStandardGiveawayAction
                 'title', 'description', 'channel_id', 'posting_mode', 'winner_count',
                 'requires_booster', 'duration_minutes', 'image_path', 'banner_image_path',
                 'claim_link', 'claim_deadline_hours', 'congrats_message_template',
+                'per_winner_message_channel_id', 'per_winner_message_template',
                 'recurrence_rule', 'recurrence_start_at', 'recurrence_timezone',
             ]),
         );

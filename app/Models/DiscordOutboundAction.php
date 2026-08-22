@@ -30,6 +30,8 @@ class DiscordOutboundAction extends Model
 
     public const TYPE_ANNOUNCE_GIVEAWAY_WINNER = 'announce_giveaway_winner';
 
+    public const TYPE_ANNOUNCE_STANDARD_GIVEAWAY_WINNER = 'announce_standard_giveaway_winner';
+
     public const TYPE_POST_BROADCAST_MESSAGE = 'post_broadcast_message';
 
     public const STATUS_PENDING = 'pending';

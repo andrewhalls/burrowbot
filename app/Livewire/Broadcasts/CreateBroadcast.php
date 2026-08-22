@@ -8,6 +8,7 @@ use App\Actions\Broadcasts\CreateBroadcastAction;
 use App\Livewire\Concerns\ResolvesBrowserTimezone;
 use App\Models\Guild;
 use App\Support\Events\BuildRecurrenceRule;
+use App\Support\GuildAdmins\GuildAdminSection;
 use Illuminate\Contracts\View\View;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Auth;
@@ -45,7 +46,7 @@ class CreateBroadcast extends Component
 
     public function mount(Guild $guild): void
     {
-        $this->authorize('manage', $guild);
+        abort_unless(Auth::user()->hasGuildAdminSection($guild, GuildAdminSection::BROADCASTS), 403);
 
         $this->guild = $guild;
         $this->channelId = (string) ($guild->default_channel_id ?? '');
@@ -53,7 +54,7 @@ class CreateBroadcast extends Component
 
     public function save(CreateBroadcastAction $createBroadcast, BuildRecurrenceRule $buildRecurrenceRule): void
     {
-        $this->authorize('manage', $this->guild);
+        abort_unless(Auth::user()->hasGuildAdminSection($this->guild, GuildAdminSection::BROADCASTS), 403);
 
         $validated = $this->validate([
             'title' => ['required', 'string', 'max:255'],

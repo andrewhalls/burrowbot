@@ -8,6 +8,7 @@ use App\Models\DiscordMember;
 use App\Models\DiscordOutboundAction;
 use App\Models\Giveaway;
 use App\Models\GiveawayEntry;
+use App\Models\Guild;
 use App\Support\Giveaways\JoinResult;
 
 function joinAction(): JoinGiveawayAction
@@ -70,6 +71,19 @@ it('enqueues a per-winner outbound action when both winner-message fields are co
     expect($action)->not->toBeNull()
         ->and($action->payload['channel_id'])->toBe('987654')
         ->and($action->payload['message'])->toBe("Congrats <@111>! You won {$result->item->name}.");
+});
+
+it('does not enqueue a per-winner outbound action when the guild\'s flag is disabled, even with both fields configured', function () {
+    $guild = Guild::factory()->withPopupGiveawayWinnerMessagesDisabled()->create();
+    $theme = CollectionTheme::factory()->for($guild)->withItems(1)->create();
+    $giveaway = Giveaway::factory()->for($guild)->for($theme, 'collectionTheme')
+        ->active()
+        ->withWinnerMessage('987654', 'Congrats {winner}!')
+        ->create();
+
+    joinAction()->execute($giveaway, '111', 'winner-name');
+
+    expect(DiscordOutboundAction::query()->where('giveaway_id', $giveaway->id)->where('type', DiscordOutboundAction::TYPE_ANNOUNCE_GIVEAWAY_WINNER)->count())->toBe(0);
 });
 
 it('does not enqueue a per-winner outbound action when neither winner-message field is configured', function () {

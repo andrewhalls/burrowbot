@@ -76,6 +76,8 @@ class GenerateStandardGiveawayOccurrences extends Command
                         'claim_link' => $giveaway->claim_link,
                         'claim_deadline_hours' => $giveaway->claim_deadline_hours,
                         'congrats_message_template' => $giveaway->congrats_message_template,
+                        'per_winner_message_channel_id' => $giveaway->per_winner_message_channel_id,
+                        'per_winner_message_template' => $giveaway->per_winner_message_template,
                         'status' => StandardGiveawayOccurrence::STATUS_SCHEDULED,
                     ],
                 );

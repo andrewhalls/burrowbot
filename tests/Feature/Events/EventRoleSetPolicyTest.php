@@ -23,3 +23,21 @@ it('denies managing a role set belonging to a guild the user does not admin', fu
 
     expect($user->can('manage', $roleSet))->toBeFalse();
 });
+
+it('allows a scoped admin granted the event-role-sets section', function () {
+    $user = User::factory()->create();
+    $guild = Guild::factory()->create();
+    GuildAdmin::factory()->for($guild)->for($user)->granted(['event-role-sets'])->create();
+    $roleSet = EventRoleSet::factory()->for($guild)->create();
+
+    expect($user->can('manage', $roleSet))->toBeTrue();
+});
+
+it('denies a scoped admin not granted the event-role-sets section', function () {
+    $user = User::factory()->create();
+    $guild = Guild::factory()->create();
+    GuildAdmin::factory()->for($guild)->for($user)->granted(['events'])->create();
+    $roleSet = EventRoleSet::factory()->for($guild)->create();
+
+    expect($user->can('manage', $roleSet))->toBeFalse();
+});

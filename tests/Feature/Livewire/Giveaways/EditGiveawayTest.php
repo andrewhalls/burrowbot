@@ -82,6 +82,36 @@ it('rejects setting only one of the winner-message fields', function () {
     expect($giveaway->fresh()->winner_message_channel_id)->toBeNull();
 });
 
+it('hides the winner-message section when the guild\'s flag is disabled', function () {
+    $guild = Guild::factory()->withPopupGiveawayWinnerMessagesDisabled()->create();
+    $theme = CollectionTheme::factory()->for($guild)->create();
+    $giveaway = Giveaway::factory()->for($theme, 'collectionTheme')->for($guild)->create();
+    $user = actingGiveawayAdminFor($guild);
+
+    Livewire::actingAs($user)
+        ->test(EditGiveaway::class, ['giveaway' => $giveaway])
+        ->assertDontSee('Per-winner message');
+});
+
+it('leaves already-saved winner-message fields untouched when saving while the guild\'s flag is disabled', function () {
+    $guild = Guild::factory()->withPopupGiveawayWinnerMessagesDisabled()->create();
+    $theme = CollectionTheme::factory()->for($guild)->create();
+    $giveaway = Giveaway::factory()->for($theme, 'collectionTheme')->for($guild)
+        ->withWinnerMessage('987654', 'Congrats {winner}!')
+        ->create();
+    $user = actingGiveawayAdminFor($guild);
+
+    Livewire::actingAs($user)
+        ->test(EditGiveaway::class, ['giveaway' => $giveaway])
+        ->set('description', 'Updated description')
+        ->call('save')
+        ->assertHasNoErrors();
+
+    expect($giveaway->fresh()->winner_message_channel_id)->toBe('987654')
+        ->and($giveaway->fresh()->winner_message_template)->toBe('Congrats {winner}!')
+        ->and($giveaway->fresh()->description)->toBe('Updated description');
+});
+
 it('saves changes to a draft giveaway', function () {
     $guild = Guild::factory()->create();
     $theme = CollectionTheme::factory()->for($guild)->create();

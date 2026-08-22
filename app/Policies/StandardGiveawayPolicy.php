@@ -6,16 +6,17 @@ namespace App\Policies;
 
 use App\Models\StandardGiveaway;
 use App\Models\User;
+use App\Support\GuildAdmins\GuildAdminSection;
 
 class StandardGiveawayPolicy
 {
     public function view(User $user, StandardGiveaway $giveaway): bool
     {
-        return $user->isAdminOfGuild($giveaway->guild_id);
+        return $user->hasGuildAdminSection($giveaway->guild_id, GuildAdminSection::STANDARD_GIVEAWAYS);
     }
 
     public function manage(User $user, StandardGiveaway $giveaway): bool
     {
-        return $user->isAdminOfGuild($giveaway->guild_id);
+        return $user->hasGuildAdminSection($giveaway->guild_id, GuildAdminSection::STANDARD_GIVEAWAYS);
     }
 }

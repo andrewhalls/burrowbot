@@ -10,6 +10,7 @@ use App\Livewire\Events\OccurrenceRoster;
 use App\Livewire\Giveaways\CreateGiveaway;
 use App\Livewire\Giveaways\GiveawayDashboard;
 use App\Livewire\Giveaways\GiveawayIndex;
+use App\Livewire\GuildAdmins\AdminIndex;
 use App\Livewire\Guilds\GuildSettings;
 use App\Livewire\StandardGiveaways\OccurrenceDashboard;
 use App\Livewire\StandardGiveaways\StandardGiveawayIndex;
@@ -44,6 +45,7 @@ Route::middleware('auth')->group(function () {
     Route::get('/guilds/{guild}/standard-giveaways', StandardGiveawayIndex::class)->name('guilds.standard-giveaways.index');
     Route::get('/guilds/{guild}/standard-giveaway-occurrences/{occurrence}', OccurrenceDashboard::class)->name('guilds.standard-giveaway-occurrences.show');
     Route::get('/guilds/{guild}/broadcasts', BroadcastIndex::class)->name('guilds.broadcasts.index');
+    Route::get('/guilds/{guild}/admins', AdminIndex::class)->name('guilds.admins.index');
 
     Route::post('/logout', function () {
         Auth::logout();

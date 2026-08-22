@@ -23,3 +23,21 @@ it('denies managing a theme belonging to a guild the user does not admin', funct
 
     expect($user->can('manage', $theme))->toBeFalse();
 });
+
+it('allows a scoped admin granted the themes section', function () {
+    $user = User::factory()->create();
+    $guild = Guild::factory()->create();
+    GuildAdmin::factory()->for($guild)->for($user)->granted(['themes'])->create();
+    $theme = CollectionTheme::factory()->for($guild)->create();
+
+    expect($user->can('manage', $theme))->toBeTrue();
+});
+
+it('denies a scoped admin not granted the themes section', function () {
+    $user = User::factory()->create();
+    $guild = Guild::factory()->create();
+    GuildAdmin::factory()->for($guild)->for($user)->granted(['giveaways'])->create();
+    $theme = CollectionTheme::factory()->for($guild)->create();
+
+    expect($user->can('manage', $theme))->toBeFalse();
+});

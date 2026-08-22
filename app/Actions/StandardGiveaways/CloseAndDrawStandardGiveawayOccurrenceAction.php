@@ -10,6 +10,7 @@ use App\Models\DiscordOutboundAction;
 use App\Models\StandardGiveawayOccurrence;
 use App\Models\StandardGiveawayWinner;
 use App\Support\Giveaways\AssignRandomItem;
+use App\Support\Giveaways\RenderWinnerMessage;
 use App\Support\StandardGiveaways\DrawRandomWinners;
 use App\Support\StandardGiveaways\RenderCongratsMessage;
 use Illuminate\Support\Facades\DB;
@@ -23,13 +24,21 @@ use Illuminate\Support\Facades\DB;
  * and enqueues one outbound action that both edits the original live post
  * (rebuilt from this payload's own snapshot fields) and, when the
  * occurrence has a congrats_message_template and at least one winner,
- * sends a separately-templated congratulations/claim message.
+ * sends a separately-templated congratulations/claim message. Also, when
+ * the occurrence has its own separate per-winner message channel/template
+ * configured, enqueues one additional outbound action per drawn winner
+ * (standard-giveaway-occurrences - "Individual per-winner message sent
+ * alongside the combined announcement") - independent of and alongside
+ * the single combined action above, reusing App\Support\Giveaways\
+ * RenderWinnerMessage since it's already capability-agnostic (design.md
+ * Decision 5).
  *
  * See openspec specs/standard-giveaway-occurrences - "Automatic closing
  * and drawing at end time", "Fair prize assignment across multiple
  * winners", "Winners and claim details shown on the closed occurrence",
- * "Separate winner announcement message with claim details"; design.md
- * Decisions 2, 3, 4.
+ * "Separate winner announcement message with claim details",
+ * "Individual per-winner message sent alongside the combined
+ * announcement"; design.md Decisions 2, 3, 4.
  */
 class CloseAndDrawStandardGiveawayOccurrenceAction
 {
@@ -37,6 +46,7 @@ class CloseAndDrawStandardGiveawayOccurrenceAction
         private readonly DrawRandomWinners $drawRandomWinners,
         private readonly AssignRandomItem $assignRandomItem,
         private readonly RenderCongratsMessage $renderCongratsMessage,
+        private readonly RenderWinnerMessage $renderWinnerMessage,
     ) {}
 
     public function execute(StandardGiveawayOccurrence $occurrence): StandardGiveawayOccurrence
@@ -123,6 +133,24 @@ class CloseAndDrawStandardGiveawayOccurrenceAction
                 ],
                 'status' => DiscordOutboundAction::STATUS_PENDING,
             ]);
+
+            if ($locked->hasPerWinnerMessageConfigured()) {
+                foreach ($announcedWinners as $winner) {
+                    DiscordOutboundAction::query()->create([
+                        'type' => DiscordOutboundAction::TYPE_ANNOUNCE_STANDARD_GIVEAWAY_WINNER,
+                        'standard_giveaway_occurrence_id' => $locked->id,
+                        'payload' => [
+                            'channel_id' => $locked->per_winner_message_channel_id,
+                            'message' => ($this->renderWinnerMessage)(
+                                $locked->per_winner_message_template,
+                                $winner['discord_user_id'],
+                                (string) $winner['item_name'],
+                            ),
+                        ],
+                        'status' => DiscordOutboundAction::STATUS_PENDING,
+                    ]);
+                }
+            }
 
             return $locked;
         });

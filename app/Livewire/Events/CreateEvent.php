@@ -10,6 +10,7 @@ use App\Models\Event;
 use App\Models\EventRoleSet;
 use App\Models\Guild;
 use App\Support\Events\BuildRecurrenceRule;
+use App\Support\GuildAdmins\GuildAdminSection;
 use Illuminate\Contracts\View\View;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Auth;
@@ -55,7 +56,7 @@ class CreateEvent extends Component
 
     public function mount(Guild $guild): void
     {
-        $this->authorize('manage', $guild);
+        abort_unless(Auth::user()->hasGuildAdminSection($guild, GuildAdminSection::EVENTS), 403);
 
         $this->guild = $guild;
         $this->channelId = (string) ($guild->default_channel_id ?? '');
@@ -63,7 +64,7 @@ class CreateEvent extends Component
 
     public function save(CreateEventAction $createEvent, BuildRecurrenceRule $buildRecurrenceRule): void
     {
-        $this->authorize('manage', $this->guild);
+        abort_unless(Auth::user()->hasGuildAdminSection($this->guild, GuildAdminSection::EVENTS), 403);
 
         $validated = $this->validate([
             'title' => ['required', 'string', 'max:255'],

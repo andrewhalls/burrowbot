@@ -7,7 +7,9 @@ namespace App\Livewire\CollectionThemes;
 use App\Actions\CollectionThemes\DuplicateCollectionThemeAction;
 use App\Models\CollectionTheme;
 use App\Models\Guild;
+use App\Support\GuildAdmins\GuildAdminSection;
 use Illuminate\Contracts\View\View;
+use Illuminate\Support\Facades\Auth;
 use Livewire\Attributes\On;
 use Livewire\Component;
 
@@ -21,7 +23,7 @@ class CollectionThemeIndex extends Component
 
     public function mount(Guild $guild): void
     {
-        $this->authorize('view', $guild);
+        abort_unless(Auth::user()->hasGuildAdminSection($guild, GuildAdminSection::THEMES), 403);
 
         $this->guild = $guild;
     }

@@ -58,6 +58,14 @@ class StandardGiveawayFactory extends Factory
         ]);
     }
 
+    public function withPerWinnerMessage(string $channelId, string $template): static
+    {
+        return $this->state([
+            'per_winner_message_channel_id' => $channelId,
+            'per_winner_message_template' => $template,
+        ]);
+    }
+
     public function createdBy(User $user): static
     {
         return $this->state(['created_by_user_id' => $user->id]);

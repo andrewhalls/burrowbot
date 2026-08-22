@@ -61,6 +61,14 @@ class StandardGiveawayOccurrenceFactory extends Factory
         ]);
     }
 
+    public function withPerWinnerMessage(string $channelId, string $template): static
+    {
+        return $this->state([
+            'per_winner_message_channel_id' => $channelId,
+            'per_winner_message_template' => $template,
+        ]);
+    }
+
     public function fromGiveaway(StandardGiveaway $giveaway): static
     {
         return $this->state([
@@ -79,6 +87,8 @@ class StandardGiveawayOccurrenceFactory extends Factory
             'claim_link' => $giveaway->claim_link,
             'claim_deadline_hours' => $giveaway->claim_deadline_hours,
             'congrats_message_template' => $giveaway->congrats_message_template,
+            'per_winner_message_channel_id' => $giveaway->per_winner_message_channel_id,
+            'per_winner_message_template' => $giveaway->per_winner_message_template,
         ]);
     }
 

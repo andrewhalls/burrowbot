@@ -82,6 +82,31 @@ DISCORD_CLIENT_ID=...
 DISCORD_CLIENT_SECRET=...
 ```
 
+### Guild admin tiers
+
+Every guild has two tiers of dashboard admin, both stored on the same
+`guild_admins` table (`source` column):
+
+- **Full admins** (`source = discord_sync`) - synced automatically on every
+  login from Discord's own permissions: anyone holding `ADMINISTRATOR` or
+  `MANAGE_GUILD` for a guild becomes a full admin of it in Burrow, and loses
+  that access the next time they log in after Discord reports otherwise.
+  A full admin can view and manage every dashboard section.
+- **Scoped admins** (`source = granted`) - invited from inside the
+  dashboard's **Admins** screen (full admins only) and limited to whichever
+  of the seven sections (Settings, Collection themes, Event role sets,
+  Events, Popup giveaways, Standard giveaways, Broadcasts) they were
+  granted. This access is Burrow's own data, independent of the invitee's
+  Discord permissions - it persists across logins and is only removed by an
+  explicit Revoke or by the invitee leaving the Discord guild entirely. An
+  invite is created by searching the guild's already-synced member
+  directory, so the invitee doesn't need to have logged into Burrow first;
+  if they haven't, the grant resolves to their account automatically the
+  first time they do.
+
+See `openspec/specs/guild-admin-permissions` and `openspec/specs/auth` for
+the full behavior contract.
+
 ### Event recurrence rules & scheduled commands
 
 An event's recurrence is stored as an [RFC 5545 `RRULE`](https://icalendar.org/iCalendar-RFC-5545/3-8-5-3-recurrence-rule.html)

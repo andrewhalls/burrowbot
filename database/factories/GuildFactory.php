@@ -21,6 +21,7 @@ class GuildFactory extends Factory
             'name' => fake()->company().' Server',
             'default_channel_id' => fake()->numerify('##################'),
             'is_active' => true,
+            'popup_giveaway_winner_messages_enabled' => true,
         ];
     }
 
@@ -28,6 +29,13 @@ class GuildFactory extends Factory
     {
         return $this->state(fn (array $attributes) => [
             'is_active' => false,
+        ]);
+    }
+
+    public function withPopupGiveawayWinnerMessagesDisabled(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'popup_giveaway_winner_messages_enabled' => false,
         ]);
     }
 }

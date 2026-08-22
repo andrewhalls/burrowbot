@@ -23,3 +23,21 @@ it('denies managing a standard giveaway belonging to a guild the user does not a
 
     expect($user->can('manage', $giveaway))->toBeFalse();
 });
+
+it('allows a scoped admin granted the standard-giveaways section', function () {
+    $user = User::factory()->create();
+    $guild = Guild::factory()->create();
+    GuildAdmin::factory()->for($guild)->for($user)->granted(['standard-giveaways'])->create();
+    $giveaway = StandardGiveaway::factory()->for($guild)->create();
+
+    expect($user->can('manage', $giveaway))->toBeTrue();
+});
+
+it('denies a scoped admin not granted the standard-giveaways section', function () {
+    $user = User::factory()->create();
+    $guild = Guild::factory()->create();
+    GuildAdmin::factory()->for($guild)->for($user)->granted(['giveaways'])->create();
+    $giveaway = StandardGiveaway::factory()->for($guild)->create();
+
+    expect($user->can('manage', $giveaway))->toBeFalse();
+});

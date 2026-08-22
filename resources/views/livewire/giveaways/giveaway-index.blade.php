@@ -3,7 +3,7 @@
         <h2 class="text-lg font-semibold text-ink">Popup giveaways</h2>
         <div class="flex items-center gap-2">
             @error('delete') <p class="text-xs text-danger">{{ $message }}</p> @enderror
-            @if ($selectedGiveaway && ! $showCreateForm)
+            @if ($selectedGiveaway && ! $showCreateForm && $guild->popup_giveaway_winner_messages_enabled)
                 <button type="button" wire:click="toggleEditWinnerMessage"
                         class="rounded-pill bg-surface-hover hover:bg-line px-4 py-2 text-sm font-medium text-ink">
                     {{ $editingWinnerMessage ? 'Cancel' : 'Winner message' }}

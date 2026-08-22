@@ -6,7 +6,9 @@ namespace App\Livewire\EventRoleSets;
 
 use App\Models\EventRoleSet;
 use App\Models\Guild;
+use App\Support\GuildAdmins\GuildAdminSection;
 use Illuminate\Contracts\View\View;
+use Illuminate\Support\Facades\Auth;
 use Livewire\Attributes\On;
 use Livewire\Component;
 
@@ -20,7 +22,7 @@ class EventRoleSetIndex extends Component
 
     public function mount(Guild $guild): void
     {
-        $this->authorize('view', $guild);
+        abort_unless(Auth::user()->hasGuildAdminSection($guild, GuildAdminSection::EVENT_ROLE_SETS), 403);
 
         $this->guild = $guild;
     }

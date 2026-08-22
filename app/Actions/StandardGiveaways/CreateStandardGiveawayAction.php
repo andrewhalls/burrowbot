@@ -47,6 +47,8 @@ class CreateStandardGiveawayAction
         ?string $claimLink = null,
         ?int $claimDeadlineHours = null,
         ?string $congratsMessageTemplate = null,
+        ?string $perWinnerMessageChannelId = null,
+        ?string $perWinnerMessageTemplate = null,
     ): StandardGiveaway {
         $prizeCollectionThemeItemIds = array_values(array_unique($prizeCollectionThemeItemIds));
 
@@ -68,6 +70,7 @@ class CreateStandardGiveawayAction
             $requiresBooster, $durationMinutes, $prizeCollectionThemeItemIds,
             $requiredDiscordRoleIds, $recurrenceRule, $scheduledPostAt, $recurrenceTimezone, $imagePath, $createdBy,
             $bannerImagePath, $claimLink, $claimDeadlineHours, $congratsMessageTemplate,
+            $perWinnerMessageChannelId, $perWinnerMessageTemplate,
         ) {
             $giveaway = $guild->standardGiveaways()->create([
                 'created_by_user_id' => $createdBy?->id,
@@ -84,6 +87,8 @@ class CreateStandardGiveawayAction
                 'claim_link' => $claimLink,
                 'claim_deadline_hours' => $claimDeadlineHours,
                 'congrats_message_template' => $congratsMessageTemplate,
+                'per_winner_message_channel_id' => $perWinnerMessageChannelId,
+                'per_winner_message_template' => $perWinnerMessageTemplate,
                 'recurrence_rule' => $recurrenceRule,
                 'recurrence_start_at' => $scheduledPostAt,
                 'recurrence_timezone' => $recurrenceTimezone,
@@ -113,6 +118,8 @@ class CreateStandardGiveawayAction
                     'claim_link' => $giveaway->claim_link,
                     'claim_deadline_hours' => $giveaway->claim_deadline_hours,
                     'congrats_message_template' => $giveaway->congrats_message_template,
+                    'per_winner_message_channel_id' => $giveaway->per_winner_message_channel_id,
+                    'per_winner_message_template' => $giveaway->per_winner_message_template,
                     // Unlike StandardGiveaway.recurrence_start_at
                     // (deliberately kept as wall-clock numbers, paired with
                     // recurrence_timezone, for ExpandRecurrenceRule), the

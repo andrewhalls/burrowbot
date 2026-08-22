@@ -11,7 +11,9 @@ use App\Actions\StandardGiveaways\UpdateStandardGiveawayStatusAction;
 use App\Models\Guild;
 use App\Models\StandardGiveaway;
 use App\Models\StandardGiveawayOccurrence;
+use App\Support\GuildAdmins\GuildAdminSection;
 use Illuminate\Contracts\View\View;
+use Illuminate\Support\Facades\Auth;
 use InvalidArgumentException;
 use Livewire\Attributes\On;
 use Livewire\Component;
@@ -32,7 +34,7 @@ class StandardGiveawayIndex extends Component
 
     public function mount(Guild $guild): void
     {
-        $this->authorize('view', $guild);
+        abort_unless(Auth::user()->hasGuildAdminSection($guild, GuildAdminSection::STANDARD_GIVEAWAYS), 403);
 
         $this->guild = $guild;
     }

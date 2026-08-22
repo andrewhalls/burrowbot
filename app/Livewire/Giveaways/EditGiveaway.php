@@ -71,6 +71,8 @@ class EditGiveaway extends Component
     {
         $this->authorize('manage', $this->giveaway);
 
+        $winnerMessageEnabled = $this->guild->popup_giveaway_winner_messages_enabled;
+
         $validated = $this->validate([
             'channelId' => ['required', 'string'],
             'collectionThemeId' => [
@@ -83,8 +85,12 @@ class EditGiveaway extends Component
             'scheduledStartTime' => ['nullable', 'required_with:scheduledStartDate', 'date_format:H:i'],
             'description' => ['nullable', 'string'],
             'image' => ['nullable', 'image', 'max:5120'],
-            'winnerMessageChannelId' => ['nullable', 'string', 'required_with:winnerMessageTemplate'],
-            'winnerMessageTemplate' => ['nullable', 'string', 'required_with:winnerMessageChannelId'],
+            'winnerMessageChannelId' => $winnerMessageEnabled
+                ? ['nullable', 'string', 'required_with:winnerMessageTemplate']
+                : ['nullable'],
+            'winnerMessageTemplate' => $winnerMessageEnabled
+                ? ['nullable', 'string', 'required_with:winnerMessageChannelId']
+                : ['nullable'],
         ]);
 
         $theme = CollectionTheme::query()->findOrFail($validated['collectionThemeId']);
@@ -102,17 +108,26 @@ class EditGiveaway extends Component
 
         $imagePath = $this->image?->store('giveaway-images', 'public') ?? $this->giveaway->image_path;
 
+        $attributes = [
+            'collection_theme_id' => $theme->id,
+            'channel_id' => $validated['channelId'],
+            'duration_minutes' => $validated['durationMinutes'],
+            'scheduled_start_at' => $scheduledStartAt,
+            'description' => $validated['description'] !== '' ? $validated['description'] : null,
+            'image_path' => $imagePath,
+        ];
+
+        // Leave the saved fields untouched when the flag is off, rather than
+        // clearing them - disabling the feature guild-wide shouldn't wipe a
+        // giveaway's configuration, only stop it from being editable/sent
+        // (design.md Decision 2).
+        if ($winnerMessageEnabled) {
+            $attributes['winner_message_channel_id'] = $validated['winnerMessageChannelId'] !== '' ? $validated['winnerMessageChannelId'] : null;
+            $attributes['winner_message_template'] = $validated['winnerMessageTemplate'] !== '' ? $validated['winnerMessageTemplate'] : null;
+        }
+
         try {
-            $this->giveaway = $updateGiveaway->execute($this->giveaway, [
-                'collection_theme_id' => $theme->id,
-                'channel_id' => $validated['channelId'],
-                'duration_minutes' => $validated['durationMinutes'],
-                'scheduled_start_at' => $scheduledStartAt,
-                'description' => $validated['description'] !== '' ? $validated['description'] : null,
-                'image_path' => $imagePath,
-                'winner_message_channel_id' => $validated['winnerMessageChannelId'] !== '' ? $validated['winnerMessageChannelId'] : null,
-                'winner_message_template' => $validated['winnerMessageTemplate'] !== '' ? $validated['winnerMessageTemplate'] : null,
-            ]);
+            $this->giveaway = $updateGiveaway->execute($this->giveaway, $attributes);
         } catch (InvalidArgumentException $e) {
             $this->addError('collectionThemeId', $e->getMessage());
 

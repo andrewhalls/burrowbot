@@ -54,6 +54,11 @@ export async function executeOutboundAction(action, adapter) {
 
       return {}
     case 'announce_giveaway_winner':
+    case 'announce_standard_giveaway_winner':
+      // Same generic "send this plain text to this channel" operation as
+      // the popup giveaway per-winner message - reuses the same adapter
+      // method rather than a near-identical duplicate (design.md Decision 5,
+      // add-standard-giveaway-per-winner-message-and-popup-flag).
       await adapter.announceGiveawayWinner(action.payload)
 
       return {}

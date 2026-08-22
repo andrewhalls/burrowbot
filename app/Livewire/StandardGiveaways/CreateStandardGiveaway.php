@@ -12,8 +12,10 @@ use App\Models\DiscordRole;
 use App\Models\Guild;
 use App\Models\StandardGiveaway;
 use App\Support\Events\BuildRecurrenceRule;
+use App\Support\GuildAdmins\GuildAdminSection;
 use Illuminate\Contracts\View\View;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
 use InvalidArgumentException;
 use Livewire\Component;
@@ -38,6 +40,10 @@ class CreateStandardGiveaway extends Component
     public string $claimLink = '';
 
     public ?int $claimDeadlineHours = null;
+
+    public string $perWinnerMessageChannelId = '';
+
+    public string $perWinnerMessageTemplate = '';
 
     public string $congratsMessageTemplate = '';
 
@@ -78,14 +84,14 @@ class CreateStandardGiveaway extends Component
 
     public function mount(Guild $guild): void
     {
-        $this->authorize('manage', $guild);
+        abort_unless(Auth::user()->hasGuildAdminSection($guild, GuildAdminSection::STANDARD_GIVEAWAYS), 403);
 
         $this->guild = $guild;
         $this->channelId = (string) ($guild->default_channel_id ?? '');
     }
 
     /**
-     * @return \Illuminate\Support\Collection<int, CollectionThemeItem>
+     * @return Collection<int, CollectionThemeItem>
      */
     public function getSearchResultsProperty()
     {
@@ -118,7 +124,7 @@ class CreateStandardGiveaway extends Component
      * Keyed by id, for turning $selectedPrizeItemIds into chips showing the
      * item's thumbnail and name instead of a bare id in the view.
      *
-     * @return \Illuminate\Support\Collection<int, CollectionThemeItem>
+     * @return Collection<int, CollectionThemeItem>
      */
     public function getSelectedPrizeItemModelsProperty()
     {
@@ -155,7 +161,7 @@ class CreateStandardGiveaway extends Component
      * Keyed by discord_role_id, for turning $selectedRoleIds into
      * human-readable chips in the view.
      *
-     * @return \Illuminate\Support\Collection<string, DiscordRole>
+     * @return Collection<string, DiscordRole>
      */
     public function getSelectedRoleModelsProperty()
     {
@@ -181,7 +187,7 @@ class CreateStandardGiveaway extends Component
 
     public function save(CreateStandardGiveawayAction $createGiveaway, BuildRecurrenceRule $buildRecurrenceRule): void
     {
-        $this->authorize('manage', $this->guild);
+        abort_unless(Auth::user()->hasGuildAdminSection($this->guild, GuildAdminSection::STANDARD_GIVEAWAYS), 403);
 
         $validated = $this->validate([
             'title' => ['required', 'string', 'max:255'],
@@ -191,6 +197,8 @@ class CreateStandardGiveaway extends Component
             'claimLink' => ['nullable', 'string', 'max:500'],
             'claimDeadlineHours' => ['nullable', 'integer', 'min:1'],
             'congratsMessageTemplate' => ['nullable', 'string'],
+            'perWinnerMessageChannelId' => ['nullable', 'string', 'required_with:perWinnerMessageTemplate'],
+            'perWinnerMessageTemplate' => ['nullable', 'string', 'required_with:perWinnerMessageChannelId'],
             'channelId' => ['required', 'string'],
             'postingMode' => ['required', 'in:'.StandardGiveaway::POSTING_MODE_THREAD.','.StandardGiveaway::POSTING_MODE_MESSAGE],
             'winnerCount' => ['required', 'integer', 'min:1'],
@@ -257,6 +265,8 @@ class CreateStandardGiveaway extends Component
                 $validated['claimLink'] !== '' ? $validated['claimLink'] : null,
                 $validated['claimDeadlineHours'],
                 $validated['congratsMessageTemplate'] !== '' ? $validated['congratsMessageTemplate'] : null,
+                $validated['perWinnerMessageChannelId'] !== '' ? $validated['perWinnerMessageChannelId'] : null,
+                $validated['perWinnerMessageTemplate'] !== '' ? $validated['perWinnerMessageTemplate'] : null,
             );
         } catch (InvalidArgumentException $e) {
             $this->addError('selectedPrizeItemIds', $e->getMessage());

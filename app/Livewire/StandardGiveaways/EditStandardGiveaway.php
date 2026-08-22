@@ -50,6 +50,10 @@ class EditStandardGiveaway extends Component
 
     public string $congratsMessageTemplate = '';
 
+    public string $perWinnerMessageChannelId = '';
+
+    public string $perWinnerMessageTemplate = '';
+
     public string $channelId = '';
 
     public string $postingMode = StandardGiveaway::POSTING_MODE_MESSAGE;
@@ -103,6 +107,8 @@ class EditStandardGiveaway extends Component
         $this->claimLink = $giveaway->claim_link ?? '';
         $this->claimDeadlineHours = $giveaway->claim_deadline_hours;
         $this->congratsMessageTemplate = $giveaway->congrats_message_template ?? '';
+        $this->perWinnerMessageChannelId = $giveaway->per_winner_message_channel_id ?? '';
+        $this->perWinnerMessageTemplate = $giveaway->per_winner_message_template ?? '';
         $this->selectedPrizeItemIds = $giveaway->prizeItems->pluck('collection_theme_item_id')->all();
         $this->selectedRoleIds = $giveaway->requiredRoles->pluck('discord_role_id')->all();
 
@@ -225,6 +231,8 @@ class EditStandardGiveaway extends Component
             'claimLink' => ['nullable', 'string', 'max:500'],
             'claimDeadlineHours' => ['nullable', 'integer', 'min:1'],
             'congratsMessageTemplate' => ['nullable', 'string'],
+            'perWinnerMessageChannelId' => ['nullable', 'string', 'required_with:perWinnerMessageTemplate'],
+            'perWinnerMessageTemplate' => ['nullable', 'string', 'required_with:perWinnerMessageChannelId'],
             'channelId' => ['required', 'string'],
             'postingMode' => ['required', 'in:'.StandardGiveaway::POSTING_MODE_THREAD.','.StandardGiveaway::POSTING_MODE_MESSAGE],
             'winnerCount' => ['required', 'integer', 'min:1'],
@@ -276,6 +284,8 @@ class EditStandardGiveaway extends Component
             'claim_link' => $validated['claimLink'] !== '' ? $validated['claimLink'] : null,
             'claim_deadline_hours' => $validated['claimDeadlineHours'],
             'congrats_message_template' => $validated['congratsMessageTemplate'] !== '' ? $validated['congratsMessageTemplate'] : null,
+            'per_winner_message_channel_id' => $validated['perWinnerMessageChannelId'] !== '' ? $validated['perWinnerMessageChannelId'] : null,
+            'per_winner_message_template' => $validated['perWinnerMessageTemplate'] !== '' ? $validated['perWinnerMessageTemplate'] : null,
             'recurrence_rule' => $recurrenceRule,
             'recurrence_start_at' => $startAt,
             'recurrence_timezone' => $this->resolvedTimezone(),

@@ -8,6 +8,7 @@ use App\Actions\Giveaways\CreateGiveawayAction;
 use App\Livewire\Concerns\ResolvesBrowserTimezone;
 use App\Models\CollectionTheme;
 use App\Models\Guild;
+use App\Support\GuildAdmins\GuildAdminSection;
 use Illuminate\Contracts\View\View;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Auth;
@@ -41,7 +42,7 @@ class CreateGiveaway extends Component
 
     public function mount(Guild $guild): void
     {
-        $this->authorize('manage', $guild);
+        abort_unless(Auth::user()->hasGuildAdminSection($guild, GuildAdminSection::GIVEAWAYS), 403);
 
         $this->guild = $guild;
         $this->channelId = (string) ($guild->default_channel_id ?? '');
@@ -49,7 +50,14 @@ class CreateGiveaway extends Component
 
     public function save(CreateGiveawayAction $createGiveaway): void
     {
-        $this->authorize('manage', $this->guild);
+        abort_unless(Auth::user()->hasGuildAdminSection($this->guild, GuildAdminSection::GIVEAWAYS), 403);
+
+        $winnerMessageEnabled = $this->guild->popup_giveaway_winner_messages_enabled;
+
+        if (! $winnerMessageEnabled) {
+            $this->winnerMessageChannelId = '';
+            $this->winnerMessageTemplate = '';
+        }
 
         $validated = $this->validate([
             'channelId' => ['required', 'string'],
@@ -63,8 +71,12 @@ class CreateGiveaway extends Component
             'scheduledStartTime' => ['nullable', 'required_with:scheduledStartDate', 'date_format:H:i'],
             'description' => ['nullable', 'string'],
             'image' => ['nullable', 'image', 'max:5120'],
-            'winnerMessageChannelId' => ['nullable', 'string', 'required_with:winnerMessageTemplate'],
-            'winnerMessageTemplate' => ['nullable', 'string', 'required_with:winnerMessageChannelId'],
+            'winnerMessageChannelId' => $winnerMessageEnabled
+                ? ['nullable', 'string', 'required_with:winnerMessageTemplate']
+                : ['nullable'],
+            'winnerMessageTemplate' => $winnerMessageEnabled
+                ? ['nullable', 'string', 'required_with:winnerMessageChannelId']
+                : ['nullable'],
         ]);
 
         $theme = CollectionTheme::query()->findOrFail($validated['collectionThemeId']);

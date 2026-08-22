@@ -211,6 +211,18 @@ it('offers the winner-message button regardless of giveaway status, unlike Edit/
         ->assertSeeHtml('wire:click="toggleEditWinnerMessage"');
 });
 
+it('hides the winner-message button when the guild\'s flag is disabled', function () {
+    $guild = Guild::factory()->withPopupGiveawayWinnerMessagesDisabled()->create();
+    $theme = CollectionTheme::factory()->for($guild)->create();
+    $giveaway = Giveaway::factory()->for($theme, 'collectionTheme')->for($guild)->create();
+    $staff = actingGiveawayStaffFor($guild);
+
+    Livewire::actingAs($staff)
+        ->test(GiveawayIndex::class, ['guild' => $guild])
+        ->call('select', $giveaway->id)
+        ->assertDontSeeHtml('wire:click="toggleEditWinnerMessage"');
+});
+
 it('opening the winner-message form closes the main edit form, and vice versa', function () {
     $guild = Guild::factory()->create();
     $theme = CollectionTheme::factory()->for($guild)->create();

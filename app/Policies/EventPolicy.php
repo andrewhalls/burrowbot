@@ -6,16 +6,17 @@ namespace App\Policies;
 
 use App\Models\Event;
 use App\Models\User;
+use App\Support\GuildAdmins\GuildAdminSection;
 
 class EventPolicy
 {
     public function view(User $user, Event $event): bool
     {
-        return $user->isAdminOfGuild($event->guild_id);
+        return $user->hasGuildAdminSection($event->guild_id, GuildAdminSection::EVENTS);
     }
 
     public function manage(User $user, Event $event): bool
     {
-        return $user->isAdminOfGuild($event->guild_id);
+        return $user->hasGuildAdminSection($event->guild_id, GuildAdminSection::EVENTS);
     }
 }

@@ -10,7 +10,9 @@ use App\Actions\Broadcasts\UnarchiveBroadcastAction;
 use App\Actions\Broadcasts\UpdateBroadcastStatusAction;
 use App\Models\Broadcast;
 use App\Models\Guild;
+use App\Support\GuildAdmins\GuildAdminSection;
 use Illuminate\Contracts\View\View;
+use Illuminate\Support\Facades\Auth;
 use InvalidArgumentException;
 use Livewire\Attributes\On;
 use Livewire\Component;
@@ -29,7 +31,7 @@ class BroadcastIndex extends Component
 
     public function mount(Guild $guild): void
     {
-        $this->authorize('view', $guild);
+        abort_unless(Auth::user()->hasGuildAdminSection($guild, GuildAdminSection::BROADCASTS), 403);
 
         $this->guild = $guild;
     }

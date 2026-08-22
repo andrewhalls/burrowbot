@@ -161,6 +161,21 @@
         </div>
     </div>
 
+    <div class="border-t border-line pt-4 space-y-3">
+        <h3 class="text-sm font-medium">Per-winner message (optional)</h3>
+        <p class="text-xs text-muted -mt-2">Independent of the combined announcement above - sends one separate message per winner when there's more than one, in addition to it. Setting one of these two fields requires the other.</p>
+
+        <x-channel-picker :guild="$guild" model="perWinnerMessageChannelId" label="Per-winner message channel" :value="$perWinnerMessageChannelId" />
+
+        <div>
+            <label class="block text-sm text-muted mb-1">Per-winner message template</label>
+            <textarea wire:model="perWinnerMessageTemplate" rows="3" placeholder="Congrats {winner}! You won {prize}."
+                      class="w-full rounded-control bg-surface border border-line px-3 py-2 text-sm"></textarea>
+            <p class="text-xs text-muted mt-1">Placeholders: <code>{winner}</code>, <code>{prize}</code>.</p>
+            @error('perWinnerMessageTemplate') <p class="text-danger text-xs mt-1">{{ $message }}</p> @enderror
+        </div>
+    </div>
+
     <button type="button" wire:click="save" class="rounded-control bg-accent hover:bg-accent-hover px-4 py-2 text-sm font-medium text-accent-ink">
         Create giveaway
     </button>

@@ -23,3 +23,21 @@ it('denies managing an event belonging to a guild the user does not admin', func
 
     expect($user->can('manage', $event))->toBeFalse();
 });
+
+it('allows a scoped admin granted the events section', function () {
+    $user = User::factory()->create();
+    $guild = Guild::factory()->create();
+    GuildAdmin::factory()->for($guild)->for($user)->granted(['events'])->create();
+    $event = Event::factory()->for($guild)->create();
+
+    expect($user->can('manage', $event))->toBeTrue();
+});
+
+it('denies a scoped admin not granted the events section', function () {
+    $user = User::factory()->create();
+    $guild = Guild::factory()->create();
+    GuildAdmin::factory()->for($guild)->for($user)->granted(['broadcasts'])->create();
+    $event = Event::factory()->for($guild)->create();
+
+    expect($user->can('manage', $event))->toBeFalse();
+});

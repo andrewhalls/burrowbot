@@ -45,4 +45,18 @@ class User extends Authenticatable
 
         return $this->guildAdmins()->where('guild_id', $guildId)->exists();
     }
+
+    /**
+     * Whether this user's admin standing for the given guild - either tier -
+     * grants access to the given dashboard section. See GuildAdmin::hasSection().
+     */
+    public function hasGuildAdminSection(int|Guild $guild, string $section): bool
+    {
+        $guildId = $guild instanceof Guild ? $guild->id : $guild;
+
+        return $this->guildAdmins()
+            ->where('guild_id', $guildId)
+            ->get()
+            ->contains(fn (GuildAdmin $admin) => $admin->hasSection($section));
+    }
 }

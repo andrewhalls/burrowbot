@@ -8,6 +8,7 @@ use App\Actions\Broadcasts\CreateBroadcastAction;
 use App\Actions\Events\CreateEventAction;
 use App\Actions\StandardGiveaways\CreateStandardGiveawayAction;
 use App\Models\CollectionTheme;
+use App\Models\DiscordMember;
 use App\Models\EventRole;
 use App\Models\EventRoleSet;
 use App\Models\Giveaway;
@@ -17,11 +18,12 @@ use App\Models\User;
 use Illuminate\Database\Seeder;
 
 /**
- * Local/demo data: a guild, an admin for it, a collection theme with
- * items, a sample draft giveaway, a "Raid Roles" event role set, a
- * recurring weekly event, a recurring booster-only standard giveaway, and
- * a recurring weekly broadcast - enough to click around the dashboard
- * without configuring a real Discord application first.
+ * Local/demo data: a guild, a full admin for it, a scoped admin limited to
+ * popup giveaways (for manual QA of add-guild-admin-permissions), a
+ * collection theme with items, a sample draft giveaway, a "Raid Roles"
+ * event role set, a recurring weekly event, a recurring booster-only
+ * standard giveaway, and a recurring weekly broadcast - enough to click
+ * around the dashboard without configuring a real Discord application first.
  */
 class BurrowDemoSeeder extends Seeder
 {
@@ -38,7 +40,22 @@ class BurrowDemoSeeder extends Seeder
             'name' => 'Demo Server',
         ]);
 
-        GuildAdmin::factory()->for($guild)->for($admin)->create();
+        GuildAdmin::factory()->for($guild)->for($admin)->discordSynced()->create();
+
+        $giveawayModerator = User::factory()->create([
+            'name' => 'Giveaway Mod',
+            'email' => 'giveaway-mod@example.com',
+            'discord_user_id' => '000000000000000002',
+        ]);
+
+        DiscordMember::factory()->for($guild)->create([
+            'discord_user_id' => '000000000000000002',
+            'username' => 'giveaway-mod',
+        ]);
+
+        GuildAdmin::factory()->for($guild)->for($giveawayModerator)->granted(['giveaways'])->create([
+            'discord_user_id' => '000000000000000002',
+        ]);
 
         $theme = CollectionTheme::factory()
             ->for($guild)

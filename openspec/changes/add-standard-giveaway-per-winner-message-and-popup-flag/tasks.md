@@ -1,0 +1,37 @@
+## 1. Data model
+
+- [x] 1.1 Create a migration adding `popup_giveaway_winner_messages_enabled` (boolean, default `true`) to `guilds`, and nullable `per_winner_message_channel_id` (string) + `per_winner_message_template` (text) to `standard_giveaways` - also extended to `standard_giveaway_occurrences` (needed for the snapshot pattern in task 5.3, matching how `congrats_message_template` etc. already exist on both tables)
+- [x] 1.2 Add `popup_giveaway_winner_messages_enabled` to `Guild`'s `$fillable`/casts (`boolean`)
+- [x] 1.3 Add the two new fields to `StandardGiveaway`'s `$fillable`/casts and add a `hasPerWinnerMessageConfigured(): bool` helper (true only when both are non-null) - mirrors `Giveaway::hasWinnerMessageConfigured()`; also added to `StandardGiveawayOccurrence` (fields + the same helper), since `CloseAndDrawStandardGiveawayOccurrenceAction` operates on the occurrence, not the series
+- [x] 1.4 Add a `withPerWinnerMessage(string $channelId, string $template)` state to `StandardGiveawayFactory` - also added to `StandardGiveawayOccurrenceFactory`, and extended its `fromGiveaway()` snapshot helper to copy the two new fields
+
+## 2. Guild Settings: the feature flag
+
+- [x] 2.1 Add `bool $popupGiveawayWinnerMessagesEnabled` to `GuildSettings`, pre-filled in `mount()` and saved in `save()` alongside `defaultChannelId`, gated by the same `hasGuildAdminSection($guild, GuildAdminSection::SETTINGS)` check already used there
+- [x] 2.2 Add a checkbox to `guild-settings.blade.php` (matching `create-standard-giveaway.blade.php`'s `requiresBooster` checkbox convention) labeled to make clear it controls the popup giveaway per-winner message feature
+- [x] 2.3 Pest/Livewire tests: flag defaults to enabled for a guild that's never touched the setting; saving toggles it off and back on; the section-permission gate is enforced (also fixed `GuildFactory` to explicitly set the new field, matching the existing `is_active` pattern - DB column defaults don't populate in-memory model attributes after `create()`)
+
+## 3. Gate the popup giveaway feature on the flag
+
+- [x] 3.1 In `CreateGiveaway`/`EditGiveaway`/`EditGiveawayWinnerMessage`: only render the winner-message channel/template section (and only apply its `required_with` validation) when `$this->guild->popup_giveaway_winner_messages_enabled` is true - when false, hide the section entirely in each blade view. Also gated the "Winner message" button/toggle in `GiveawayIndex`/`giveaway-index.blade.php` and added an `abort_unless` guard in `EditGiveawayWinnerMessage::mount()` and `GiveawayIndex::toggleEditWinnerMessage()` for defense in depth. `EditGiveaway` leaves already-saved fields untouched (rather than clearing them) when saving while the flag is off, so disabling the flag never destroys existing configuration.
+- [x] 3.2 In `JoinGiveawayAction::execute()`: change the send-check from `$locked->hasWinnerMessageConfigured()` to also require `$locked->guild->popup_giveaway_winner_messages_enabled`
+- [x] 3.3 Pest tests: `JoinGiveawayAction` does not enqueue the per-winner outbound action when both fields are configured but the guild's flag is disabled; the Create/Edit Giveaway forms and `EditGiveawayWinnerMessage` hide the winner-message section when the flag is disabled, and show it when enabled; new `EditGiveawayWinnerMessageTest.php` also covers the `abort_unless` mount guard
+
+## 4. Standard Giveaway per-winner message: rendering and sending
+
+- [x] 4.1 Add `DiscordOutboundAction::TYPE_ANNOUNCE_STANDARD_GIVEAWAY_WINNER = 'announce_standard_giveaway_winner'` constant (singular - reuses the existing `standard_giveaway_occurrence_id` FK column already used by `TYPE_ANNOUNCE_STANDARD_GIVEAWAY_WINNERS`, no new column needed)
+- [x] 4.2 In `CloseAndDrawStandardGiveawayOccurrenceAction`, after `$announcedWinners` is built and independent of the existing batch `congrats_message`/`TYPE_ANNOUNCE_STANDARD_GIVEAWAY_WINNERS` action: if `$locked->hasPerWinnerMessageConfigured()`, loop over `$announcedWinners` and create one `DiscordOutboundAction` per entry (`type: TYPE_ANNOUNCE_STANDARD_GIVEAWAY_WINNER`, payload `{ channel_id, message }`, message rendered via `App\Support\Giveaways\RenderWinnerMessage` with that winner's `discord_user_id`/`item_name`)
+- [x] 4.3 In `bot/src/outboundActionExecutor.js`: add the `announce_standard_giveaway_winner` case, calling the existing `adapter.announceGiveawayWinner(action.payload)` (no new adapter method - same generic send)
+- [x] 4.4 Pest tests on `CloseAndDrawStandardGiveawayOccurrenceAction`: closing with both per-winner fields configured and 2+ winners enqueues one outbound action per winner with correctly-rendered messages, alongside the existing single batch action still being created; closing with only the per-winner fields (no congrats template) still enqueues the per-winner actions with the batch action absent; closing with neither configured enqueues neither; closing with zero winners enqueues no per-winner actions even with both fields configured
+- [x] 4.5 Vitest test for the new executor case, mirroring the existing `announce_giveaway_winner` case's test
+
+## 5. Standard Giveaway per-winner message: admin UI
+
+- [x] 5.1 Add the paired-validation rule (same `required_with` pattern already used for the popup giveaway fields and for the existing congrats fields) plus a channel-picker + template textarea to `CreateStandardGiveaway` + `create-standard-giveaway.blade.php`, in a new section visually/textually distinguished as a separate "sent individually per winner" mechanism from the existing combined congrats message fields
+- [x] 5.2 Same fields/validation in `EditStandardGiveaway` + `edit-standard-giveaway.blade.php` - also added both fields to `UpdateStandardGiveawayAction`'s scalar-attribute whitelist, without which they'd have been silently dropped on save
+- [x] 5.3 Extend `GenerateStandardGiveawayOccurrences` and `CreateStandardGiveawayAction`'s one-off-occurrence snapshot to copy the two new fields onto each generated occurrence, matching how `congrats_message_template`/`claim_link`/`claim_deadline_hours` are already snapshotted
+- [x] 5.4 Pest/Livewire tests: paired validation rejects setting only one field on both Create and Edit forms; both fields are correctly snapshotted onto newly-generated occurrences; editing an ongoing recurring series' per-winner fields only affects occurrences generated after the edit (mirrors the existing snapshot tests for the congrats fields)
+
+## 6. Spec alignment
+
+- [x] 6.1 Re-read `openspec/specs/guild-management/spec.md`, `openspec/specs/giveaway-lifecycle/spec.md`, `openspec/specs/giveaway-entry/spec.md`, `openspec/specs/standard-giveaways/spec.md`, and `openspec/specs/standard-giveaway-occurrences/spec.md` after implementation to confirm every scenario in this change's delta specs is actually exercised by the tests added above - cross-checked each `#### Scenario:` in all five delta specs against sections 1-5's tests; every scenario is covered (flag default/toggle/gating, paired-validation, independence from the batch congrats message, per-occurrence snapshotting, zero-winners/unconfigured skip cases). One gap found and closed: `standard-giveaways` delta's "neither field configured" scenario had no dedicated assertion, so extended the existing `leaves banner image and claim/congrats fields null when left blank` test in `CreateStandardGiveawayTest.php` to also assert `per_winner_message_channel_id`/`per_winner_message_template` are null

@@ -19,12 +19,14 @@ class Guild extends Model
         'name',
         'default_channel_id',
         'is_active',
+        'popup_giveaway_winner_messages_enabled',
     ];
 
     protected function casts(): array
     {
         return [
             'is_active' => 'boolean',
+            'popup_giveaway_winner_messages_enabled' => 'boolean',
         ];
     }
 

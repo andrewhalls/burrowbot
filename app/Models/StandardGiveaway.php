@@ -43,6 +43,8 @@ class StandardGiveaway extends Model
         'claim_link',
         'claim_deadline_hours',
         'congrats_message_template',
+        'per_winner_message_channel_id',
+        'per_winner_message_template',
         'recurrence_rule',
         'recurrence_start_at',
         'recurrence_timezone',
@@ -133,6 +135,18 @@ class StandardGiveaway extends Model
     public function isArchived(): bool
     {
         return $this->archived_at !== null;
+    }
+
+    /**
+     * Whether both per-winner message fields are set - the individual
+     * per-winner message (standard-giveaway-occurrences - "Individual
+     * per-winner message sent alongside the combined announcement") only
+     * sends when this is true, independent of the existing combined
+     * congrats message.
+     */
+    public function hasPerWinnerMessageConfigured(): bool
+    {
+        return $this->per_winner_message_channel_id !== null && $this->per_winner_message_template !== null;
     }
 
     /**

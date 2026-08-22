@@ -76,7 +76,7 @@ class JoinGiveawayAction
                 'collection_theme_item_id' => $itemId,
             ]);
 
-            if ($locked->hasWinnerMessageConfigured()) {
+            if ($locked->hasWinnerMessageConfigured() && $locked->guild->popup_giveaway_winner_messages_enabled) {
                 DiscordOutboundAction::query()->create([
                     'type' => DiscordOutboundAction::TYPE_ANNOUNCE_GIVEAWAY_WINNER,
                     'giveaway_id' => $locked->id,

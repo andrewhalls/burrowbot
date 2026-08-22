@@ -8,7 +8,9 @@ use App\Actions\Giveaways\DeleteGiveawayDraftAction;
 use App\Actions\Giveaways\StartGiveawayAction;
 use App\Models\Giveaway;
 use App\Models\Guild;
+use App\Support\GuildAdmins\GuildAdminSection;
 use Illuminate\Contracts\View\View;
+use Illuminate\Support\Facades\Auth;
 use InvalidArgumentException;
 use Livewire\Attributes\On;
 use Livewire\Component;
@@ -34,7 +36,7 @@ class GiveawayIndex extends Component
 
     public function mount(Guild $guild): void
     {
-        $this->authorize('view', $guild);
+        abort_unless(Auth::user()->hasGuildAdminSection($guild, GuildAdminSection::GIVEAWAYS), 403);
 
         $this->guild = $guild;
     }
@@ -101,6 +103,8 @@ class GiveawayIndex extends Component
         $giveaway = Giveaway::query()->where('guild_id', $this->guild->id)->findOrFail($this->selectedId);
 
         $this->authorize('manage', $giveaway);
+
+        abort_unless($this->guild->popup_giveaway_winner_messages_enabled, 403);
 
         $this->editingWinnerMessage = ! $this->editingWinnerMessage;
         $this->editing = false;

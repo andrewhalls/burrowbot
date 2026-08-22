@@ -80,6 +80,25 @@ it('updates banner image and claim/congrats fields without touching existing occ
         ->and($occurrence->fresh()->congrats_message_template)->toBe('Old template');
 });
 
+it('updates per-winner message fields without touching existing occurrences', function () {
+    $giveaway = StandardGiveaway::factory()->create();
+    $occurrence = StandardGiveawayOccurrence::factory()->create([
+        'standard_giveaway_id' => $giveaway->id,
+        'per_winner_message_channel_id' => 'old-channel',
+        'per_winner_message_template' => 'Old per-winner template',
+    ]);
+
+    (new UpdateStandardGiveawayAction)->execute($giveaway, [
+        'per_winner_message_channel_id' => 'new-channel',
+        'per_winner_message_template' => 'New per-winner template',
+    ]);
+
+    expect($giveaway->fresh()->per_winner_message_channel_id)->toBe('new-channel')
+        ->and($giveaway->fresh()->per_winner_message_template)->toBe('New per-winner template')
+        ->and($occurrence->fresh()->per_winner_message_channel_id)->toBe('old-channel')
+        ->and($occurrence->fresh()->per_winner_message_template)->toBe('Old per-winner template');
+});
+
 it('leaves an already-generated occurrence\'s banner image unchanged and deletes the orphaned old banner file when replaced', function () {
     Storage::fake('public');
     Storage::disk('public')->put('standard-giveaway-images/old-banner.jpg', 'old-bytes');

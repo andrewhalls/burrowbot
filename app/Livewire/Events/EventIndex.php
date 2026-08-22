@@ -11,7 +11,9 @@ use App\Actions\Events\UpdateEventStatusAction;
 use App\Models\Event;
 use App\Models\EventOccurrence;
 use App\Models\Guild;
+use App\Support\GuildAdmins\GuildAdminSection;
 use Illuminate\Contracts\View\View;
+use Illuminate\Support\Facades\Auth;
 use InvalidArgumentException;
 use Livewire\Attributes\On;
 use Livewire\Component;
@@ -37,7 +39,7 @@ class EventIndex extends Component
 
     public function mount(Guild $guild): void
     {
-        $this->authorize('view', $guild);
+        abort_unless(Auth::user()->hasGuildAdminSection($guild, GuildAdminSection::EVENTS), 403);
 
         $this->guild = $guild;
     }
